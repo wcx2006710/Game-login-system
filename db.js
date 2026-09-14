@@ -20,8 +20,8 @@ const insertUser = db.prepare(`
   INSERT OR IGNORE INTO users (username, password, email) VALUES (?, ?, ?)
 `);
 
+insertUser.run('wcx', 'dashuaige', 'wcx@example.com');
 insertUser.run('admin', '123456', 'admin@example.com');
 insertUser.run('test', 'test123', 'test@example.com');
-insertUser.run('alice', 'alice888', 'alice@example.com');
 
 module.exports = db;

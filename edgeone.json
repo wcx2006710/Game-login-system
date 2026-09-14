@@ -1,0 +1,16 @@
+{
+  "name": "game-login-system",
+  "outputDirectory": "./public",
+  "nodeVersion": "22.11.0",
+  "headers": [
+    {
+      "source": "/*.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ]
+}

@@ -19,11 +19,6 @@ app.use(session({
   cookie: { maxAge: 60 * 60 * 1000 } // 1小时
 }));
 
-// 根路径重定向到登录页
-app.get('/', (req, res) => {
-  res.redirect('/login.html');
-});
-
 // 登录接口
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
