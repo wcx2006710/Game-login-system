@@ -20,6 +20,7 @@
 - 会话：Cookie `session_id` + KV 存储
 - 密码：SHA-256 哈希存储（默认演示账号）
 - 会话有效期：1 小时，KV 记录 `expiresAt`，过期后自动清理
+- KV 绑定：在 EdgeOne Makers 控制台中，项目详情左侧进入 `KV 存储`，点击 `绑定命名空间`，选择命名空间后把变量名设置为 `my_kv`
 
 > 前端页面零改动，两套后端接口路径完全一致（/login、/logout、/api/current-user、/api/users）
 
@@ -59,6 +60,8 @@ login-system/
 | GET | /api/current-user | 当前用户 | {loggedIn, user} |
 | GET | /api/users | 用户列表（需登录） | [{id, username, email, created_at}] |
 | GET | /api/health | 云端 KV 诊断 | {ok, kv}；未绑定返回 503 |
+
+云端 KV 未绑定时，`/login`、`/api/current-user`、`/api/users` 会统一返回 `503 KV_UNAVAILABLE`，不再用静默未登录或 `545` 掩盖配置问题。
 
 ## 测试账号
 | 用户名 | 密码 |

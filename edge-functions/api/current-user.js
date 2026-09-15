@@ -12,6 +12,14 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function kvUnavailableResponse() {
+  return jsonResponse({
+    loggedIn: false,
+    code: 'KV_UNAVAILABLE',
+    error: '云端 KV 未绑定或不可用，请检查变量名 my_kv'
+  }, 503);
+}
+
 function getSessionId(request) {
   const cookie = request.headers.get('Cookie') || '';
   const match = cookie.match(/(?:^|;\s*)session_id=([^;]+)/);
@@ -43,20 +51,28 @@ async function getSession(sessionId) {
 export async function onRequestGet({ request }) {
   const sessionId = getSessionId(request);
 
-  if (sessionId) {
-    try {
-      const session = await getSession(sessionId);
-      if (session) {
-        return jsonResponse({
-          loggedIn: true,
-          user: {
-            id: session.id,
-            username: session.username,
-            email: session.email
-          }
-        });
-      }
-    } catch (e) {}
+  if (!sessionId) {
+    return jsonResponse({ loggedIn: false });
+  }
+
+  if (typeof my_kv === 'undefined' || !my_kv) {
+    return kvUnavailableResponse();
+  }
+
+  try {
+    const session = await getSession(sessionId);
+    if (session) {
+      return jsonResponse({
+        loggedIn: true,
+        user: {
+          id: session.id,
+          username: session.username,
+          email: session.email
+        }
+      });
+    }
+  } catch (error) {
+    return kvUnavailableResponse();
   }
 
   return jsonResponse({ loggedIn: false });

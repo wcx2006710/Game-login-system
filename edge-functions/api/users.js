@@ -19,6 +19,13 @@ function jsonResponse(data, status = 200) {
   });
 }
 
+function kvUnavailableResponse() {
+  return jsonResponse({
+    error: '云端 KV 未绑定或不可用，请检查变量名 my_kv',
+    code: 'KV_UNAVAILABLE'
+  }, 503);
+}
+
 function getSessionId(request) {
   const cookie = request.headers.get('Cookie') || '';
   const match = cookie.match(/(?:^|;\s*)session_id=([^;]+)/);
@@ -48,10 +55,21 @@ async function isLoggedIn(sessionId) {
 }
 
 export async function onRequestGet({ request }) {
-  let loggedIn = false;
+  const sessionId = getSessionId(request);
+  if (!sessionId) {
+    return jsonResponse({ error: '未登录' }, 401);
+  }
+
+  if (typeof my_kv === 'undefined' || !my_kv) {
+    return kvUnavailableResponse();
+  }
+
+  let loggedIn;
   try {
-    loggedIn = await isLoggedIn(getSessionId(request));
-  } catch (e) {}
+    loggedIn = await isLoggedIn(sessionId);
+  } catch (error) {
+    return kvUnavailableResponse();
+  }
 
   if (!loggedIn) {
     return jsonResponse({ error: '未登录' }, 401);
@@ -67,7 +85,9 @@ export async function onRequestGet({ request }) {
       users = DEFAULT_USERS;
       await my_kv.put('users', JSON.stringify(DEFAULT_USERS));
     }
-  } catch (e) {}
+  } catch (error) {
+    return kvUnavailableResponse();
+  }
 
   // 返回安全字段（不包含密码哈希）
   const list = users.map((user, index) => ({

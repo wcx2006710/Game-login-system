@@ -140,6 +140,30 @@ const unavailableLoginRes = await login.onRequestPost({
   }
 });
 assert('KV 未绑定时登录不再返回 545', unavailableLoginRes.status === 503);
+
+const unavailableCurrentRes = await currentUser.onRequestGet({
+  request: {
+    url: 'https://example.com/api/current-user',
+    headers: { get: () => 'session_id=missing-kv-session' }
+  }
+});
+assert(
+  'KV 未绑定时当前用户接口返回明确错误',
+  unavailableCurrentRes.status === 503
+    && (await parseJson(unavailableCurrentRes)).code === 'KV_UNAVAILABLE'
+);
+
+const unavailableUsersRes = await usersApi.onRequestGet({
+  request: {
+    url: 'https://example.com/api/users',
+    headers: { get: () => 'session_id=missing-kv-session' }
+  }
+});
+assert(
+  'KV 未绑定时用户列表接口返回明确错误',
+  unavailableUsersRes.status === 503
+    && (await parseJson(unavailableUsersRes)).code === 'KV_UNAVAILABLE'
+);
 globalThis.my_kv = originalKv;
 
 // --- 测试10：密码哈希正确性（与代码内置哈希一致） ---

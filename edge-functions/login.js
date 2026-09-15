@@ -4,6 +4,8 @@
 
 const SESSION_MAX_AGE_SECONDS = 60 * 60;
 
+class KvUnavailableError extends Error {}
+
 // 默认账号（密码以 SHA-256 哈希存储）
 const DEFAULT_USERS = [
   { id: 1, username: 'wcx', passwordHash: '2f8c5ef83921f63e1e5b353b55dbaed44c68f87b811d469bbd167d3b867bd3a8', email: 'wcx@example.com', created_at: '2026-09-14 00:00:00' },
@@ -21,7 +23,7 @@ async function sha256(text) {
 // 读取用户列表（懒初始化）
 async function getUsers() {
   if (typeof my_kv === 'undefined' || !my_kv) {
-    throw new Error('KV_UNAVAILABLE');
+    throw new KvUnavailableError();
   }
 
   const raw = await my_kv.get('users');
@@ -79,8 +81,10 @@ export async function onRequestPost({ request }) {
   } catch (error) {
     return jsonResponse({
       success: false,
-      code: 'KV_UNAVAILABLE',
-      error: '云端 KV 未绑定或不可用，请检查变量名 my_kv'
+      code: error instanceof KvUnavailableError ? 'KV_UNAVAILABLE' : 'KV_ERROR',
+      error: error instanceof KvUnavailableError
+        ? '云端 KV 未绑定或不可用，请检查变量名 my_kv'
+        : '云端 KV 读取失败，请查看 EdgeOne 函数日志'
     }, 503);
   }
 
