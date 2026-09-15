@@ -4,7 +4,7 @@
 
 ## ✨ 功能特性
 
-- **用户登录认证**：登录/登出全流程，密码 SHA-256 哈希存储
+- **用户登录认证**：登录/登出全流程，本地密码 PBKDF2-SHA256 哈希存储
 - **炸弹互动背景**：Canvas 粒子爆炸效果，点击炸弹可引爆
 - **失败死亡界面**：登录失败触发连环爆炸 + 屏幕震动 +「你被炸死了」
 - **扫雷游戏**：登录成功后可玩 9×9 经典扫雷，支持插旗、计时、胜负判定
@@ -23,11 +23,20 @@
 ## 📦 本地安装运行
 
 ```bash
+# 进入本地开发目录
+cd local
+
 # 安装依赖
 npm install
 
 # 启动服务
 npm start
+
+# 开发模式（文件变化后自动重启）
+npm run dev
+
+# 运行本地与云端函数测试
+npm test
 ```
 
 浏览器访问：http://127.0.0.1:3000
@@ -84,8 +93,12 @@ npm start
 
 ```
 login-system/
-├── server.js                  # 本地后端服务入口
-├── db.js                      # 本地 SQLite 数据库初始化
+├── local/                     # 本地开发模式，不属于 EdgeOne 输出
+│   ├── auth.js                # 本地密码哈希与校验
+│   ├── server.js              # 本地后端服务入口
+│   ├── db.js                  # 本地 SQLite 数据库初始化
+│   ├── package.json           # 本地开发依赖与脚本
+│   └── package-lock.json
 ├── edgeone.json               # EdgeOne Pages 配置
 ├── edge-functions/            # EdgeOne Edge Functions（云 API）
 │   ├── login.js
@@ -93,13 +106,14 @@ login-system/
 │   └── api/
 │       ├── current-user.js
 │       └── users.js
-├── package.json
 ├── data/                      # 本地 SQLite 数据库（自动生成）
+├── test-local.mjs             # 本地接口集成测试
+├── test-edge-functions.mjs    # 云端函数逻辑测试
 └── public/                    # 静态资源（云端输出目录）
     ├── index.html             # 网站首页
     ├── login.html             # 登录页（炸弹互动背景）
     ├── success.html           # 登录成功页（用户表格）
-    ├── fail.html              # 登录失败页
+    ├── favicon.svg            # 网站图标
     └── minesweeper.html       # 扫雷游戏页
 ```
 

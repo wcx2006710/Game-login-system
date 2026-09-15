@@ -4,19 +4,57 @@
 function jsonResponse(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { 'Content-Type': 'application/json; charset=UTF-8' }
+    headers: {
+      'Content-Type': 'application/json; charset=UTF-8',
+      'Cache-Control': 'no-store',
+      'X-Content-Type-Options': 'nosniff'
+    }
   });
 }
 
-export async function onRequestGet({ request }) {
+function getSessionId(request) {
   const cookie = request.headers.get('Cookie') || '';
-  const match = cookie.match(/session_id=([^;]+)/);
+  const match = cookie.match(/(?:^|;\s*)session_id=([^;]+)/);
+  if (!match) return '';
 
-  if (match) {
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return match[1];
+  }
+}
+
+async function getSession(sessionId) {
+  if (!sessionId) return null;
+
+  const key = `session:${sessionId}`;
+  const raw = await my_kv.get(key);
+  if (!raw) return null;
+
+  const session = JSON.parse(raw);
+  if (!session.expiresAt || session.expiresAt <= Date.now()) {
+    await my_kv.delete(key);
+    return null;
+  }
+
+  return session;
+}
+
+export async function onRequestGet({ request }) {
+  const sessionId = getSessionId(request);
+
+  if (sessionId) {
     try {
-      const raw = await my_kv.get(`session:${match[1]}`);
-      if (raw) {
-        return jsonResponse({ loggedIn: true, user: JSON.parse(raw) });
+      const session = await getSession(sessionId);
+      if (session) {
+        return jsonResponse({
+          loggedIn: true,
+          user: {
+            id: session.id,
+            username: session.username,
+            email: session.email
+          }
+        });
       }
     } catch (e) {}
   }

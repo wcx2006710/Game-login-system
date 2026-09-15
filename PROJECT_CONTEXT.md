@@ -7,25 +7,31 @@
 ## 技术架构（双模式）
 
 ### 本地模式（开发用）
-- 后端：Node.js + Express 5（`server.js`）
-- 数据库：SQLite（`db.js`，better-sqlite3，文件存 `data/users.db`）
+- 后端：Node.js + Express 5（`local/server.js`）
+- 数据库：SQLite（`local/db.js`，better-sqlite3，文件存 `data/users.db`）
 - 会话：express-session（内存存储）
-- 启动：`npm start` → http://127.0.0.1:3000
+- 密码：PBKDF2-SHA256 + 随机盐（`local/auth.js`，旧明文账号登录时自动迁移）
+- 启动：`cd local && npm start` → http://127.0.0.1:3000
 
 ### 云端模式（EdgeOne Pages 部署）
 - 静态资源：`public/` 目录（edgeone.json 配置 outputDirectory: ./public）
 - API：EdgeOne Edge Functions（`edge-functions/` 目录，文件即路由）
 - 数据存储：EdgeOne KV（绑定变量名必须是 `my_kv`）
 - 会话：Cookie `session_id` + KV 存储
-- 密码：SHA-256 哈希存储（本地是明文，云端是哈希）
+- 密码：SHA-256 哈希存储（默认演示账号）
+- 会话有效期：1 小时，KV 记录 `expiresAt`，过期后自动清理
 
 > 前端页面零改动，两套后端接口路径完全一致（/login、/logout、/api/current-user、/api/users）
 
 ## 目录结构
 ```
 login-system/
-├── server.js                  # 本地 Express 后端
-├── db.js                      # 本地 SQLite 初始化（含默认账号）
+├── local/                     # 仅本地开发使用，EdgeOne 部署不依赖
+│   ├── auth.js                # 密码哈希与校验
+│   ├── server.js              # Express 后端
+│   ├── db.js                  # SQLite 初始化（含默认账号）
+│   ├── package.json           # 本地依赖与测试脚本
+│   └── package-lock.json
 ├── edgeone.json               # EdgeOne 配置
 ├── edge-functions/            # 云端 Edge Functions
 │   ├── login.js               # POST /login
@@ -37,19 +43,20 @@ login-system/
 │   ├── index.html             # 网站首页（落地页）
 │   ├── login.html             # 登录页（炸弹互动背景）
 │   ├── success.html           # 登录成功页（用户表格 + 扫雷入口）
-│   ├── fail.html              # 登录失败页
+│   ├── favicon.svg            # 网站图标
 │   └── minesweeper.html       # 扫雷游戏
-├── test-edge-functions.mjs    # 云端函数逻辑测试（mock KV，15项全过）
+├── test-local.mjs             # 本地接口集成测试
+├── test-edge-functions.mjs    # 云端函数逻辑测试（mock KV）
 └── README.md                  # 给人看的完整说明
 ```
 
 ## API 接口
 | 方法 | 路径 | 说明 | 返回 |
 |------|------|------|------|
-| POST | /login | 登录 | {success, redirect} |
+| POST | /login | 登录 | {success, redirect}；参数错误 400，失败 401，限流 429 |
 | POST | /logout | 登出 | {success} |
 | GET | /api/current-user | 当前用户 | {loggedIn, user} |
-| GET | /api/users | 用户列表（需登录） | [{username, email}] |
+| GET | /api/users | 用户列表（需登录） | [{id, username, email, created_at}] |
 
 ## 测试账号
 | 用户名 | 密码 |
@@ -69,13 +76,17 @@ login-system/
 ## 关键实现细节
 - 登录页炸弹：Canvas 粒子系统，点击爆炸；登录失败触发连环爆炸 + 屏幕震动 + deathOverlay
 - 扫雷：9×9，10雷，左键翻开右键插旗，首次点击保证不踩雷
+- 本地登录：同一 IP + 用户名 15 分钟内连续失败 5 次后返回 429
+- 本地会话：Cookie 使用 `local.sid`，开启 HttpOnly、SameSite=Lax，生产环境启用 Secure
+- 用户表格：前端使用 `textContent` 渲染，不把接口数据拼进 `innerHTML`
 - 云端函数用 ES Module（export async function onRequestPost），不能用 CommonJS
 - Edge Functions 限制：单函数 5MB，CPU 200ms，body 1MB
 - .gitignore 排除：node_modules/、data/*.db、*.log、.vscode/
 
 ## 修改时注意
 1. 改前端页面：public/ 下文件，本地和云端共用
-2. 改后端逻辑：server.js（本地）和 edge-functions/（云端）要同步改
-3. 改账号密码：db.js（本地明文）+ edge-functions/login.js 和 users.js（云端哈希，需重新算 SHA-256）
-4. 云端函数测试：`node test-edge-functions.mjs`
-5. 本地数据库改了账号要删 data/users.db 重启才生效
+2. 改后端逻辑：local/server.js（本地）和 edge-functions/（云端）要同步改
+3. 改账号密码：local/db.js（本地初始化）+ edge-functions/login.js 和 users.js（云端哈希，需重新算 SHA-256）
+4. 全部测试：`cd local && npm test`
+5. 仅云端测试：`cd local && npm run test:edge`
+6. 本地数据库里的旧明文密码会在登录成功时自动迁移，通常无需删除 `data/users.db`

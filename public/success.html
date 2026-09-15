@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <title>登录成功</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -115,41 +116,98 @@
   </div>
 
   <script>
+    function redirectToLogin() {
+      window.location.href = '/login.html';
+    }
+
+    function showTableMessage(message) {
+      const tbody = document.getElementById('userTable');
+      tbody.replaceChildren();
+
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 5;
+      cell.style.textAlign = 'center';
+      cell.style.color = '#999';
+      cell.textContent = message;
+
+      row.appendChild(cell);
+      tbody.appendChild(row);
+    }
+
     async function loadUser() {
-      const res = await fetch('/api/current-user');
-      const data = await res.json();
-      if (!data.loggedIn) {
-        window.location.href = '/login.html';
-        return;
+      try {
+        const res = await fetch('/api/current-user');
+        const data = await res.json();
+        if (!data.loggedIn) {
+          redirectToLogin();
+          return;
+        }
+
+        document.getElementById('userInfo').textContent =
+          `用户名：${data.user.username} | 邮箱：${data.user.email || '未填写'}`;
+        document.getElementById('userAvatar').textContent =
+          data.user.username.charAt(0).toUpperCase();
+      } catch (error) {
+        document.getElementById('userInfo').textContent = '登录状态加载失败';
       }
-      document.getElementById('userInfo').textContent =
-        `用户名：${data.user.username} | 邮箱：${data.user.email}`;
-      document.getElementById('userAvatar').textContent =
-        data.user.username.charAt(0).toUpperCase();
     }
 
     async function loadUsers() {
-      const res = await fetch('/api/users');
-      if (res.status === 401) {
-        window.location.href = '/login.html';
-        return;
+      try {
+        const res = await fetch('/api/users');
+        if (res.status === 401) {
+          redirectToLogin();
+          return;
+        }
+
+        const users = await res.json();
+        if (!res.ok || !Array.isArray(users)) {
+          throw new Error('用户数据格式错误');
+        }
+
+        const tbody = document.getElementById('userTable');
+        tbody.replaceChildren();
+
+        if (users.length === 0) {
+          showTableMessage('暂无用户数据');
+          return;
+        }
+
+        for (const user of users) {
+          const row = document.createElement('tr');
+          const values = [
+            user.id ?? '-',
+            user.username ?? '-',
+            user.email || '-',
+            user.created_at || '-'
+          ];
+
+          for (const value of values) {
+            const cell = document.createElement('td');
+            cell.textContent = String(value);
+            row.appendChild(cell);
+          }
+
+          const statusCell = document.createElement('td');
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = '正常';
+          statusCell.appendChild(badge);
+          row.appendChild(statusCell);
+          tbody.appendChild(row);
+        }
+      } catch (error) {
+        showTableMessage('用户列表加载失败，请刷新后重试');
       }
-      const users = await res.json();
-      const tbody = document.getElementById('userTable');
-      tbody.innerHTML = users.map(u => `
-        <tr>
-          <td>${u.id}</td>
-          <td>${u.username}</td>
-          <td>${u.email || '-'}</td>
-          <td>${u.created_at}</td>
-          <td><span class="badge">正常</span></td>
-        </tr>
-      `).join('');
     }
 
     async function logout() {
-      await fetch('/logout', { method: 'POST' });
-      window.location.href = '/login.html';
+      try {
+        await fetch('/logout', { method: 'POST' });
+      } finally {
+        redirectToLogin();
+      }
     }
 
     loadUser();

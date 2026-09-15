@@ -1,11 +1,14 @@
 {
-  "name": "login-system",
+  "name": "game-login-system-local",
   "version": "1.0.0",
   "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "node --watch server.js",
+    "test": "node --test ../test-local.mjs && node ../test-edge-functions.mjs",
+    "test:local": "node --test ../test-local.mjs",
+    "test:edge": "node ../test-edge-functions.mjs"
   },
   "keywords": [],
   "author": "",

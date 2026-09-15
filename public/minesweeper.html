@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <title>扫雷游戏</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -151,10 +152,22 @@
     let timer = 0, timerInterval = null;
 
     async function checkLogin() {
-      const res = await fetch('/api/current-user');
-      const data = await res.json();
-      if (!data.loggedIn) { window.location.href = '/login.html'; return; }
-      document.getElementById('userLabel').textContent = '玩家：' + data.user.username;
+      try {
+        const res = await fetch('/api/current-user');
+        const data = await res.json();
+        if (!data.loggedIn) {
+          window.location.href = '/login.html';
+          return false;
+        }
+
+        document.getElementById('userLabel').textContent = '玩家：' + data.user.username;
+        return true;
+      } catch (error) {
+        document.getElementById('userLabel').textContent = '登录状态检查失败';
+        document.getElementById('message').textContent = '无法连接服务器，请稍后重试';
+        document.getElementById('message').className = 'message lose';
+        return false;
+      }
     }
 
     function initGame() {
@@ -211,8 +224,20 @@
             cell.classList.add('flagged');
             cell.textContent = '🚩';
           }
+          cell.tabIndex = 0;
+          cell.setAttribute('role', 'button');
+          cell.setAttribute('aria-label', `第 ${r + 1} 行，第 ${c + 1} 列`);
           cell.addEventListener('click', () => handleClick(r, c));
           cell.addEventListener('contextmenu', (e) => { e.preventDefault(); handleRightClick(r, c); });
+          cell.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              handleClick(r, c);
+            } else if (e.key.toLowerCase() === 'f') {
+              e.preventDefault();
+              handleRightClick(r, c);
+            }
+          });
           boardEl.appendChild(cell);
         }
       }
@@ -271,8 +296,11 @@
       }
     }
 
-    checkLogin();
-    initGame();
+    async function bootstrap() {
+      if (await checkLogin()) initGame();
+    }
+
+    bootstrap();
   </script>
 </body>
 </html>
