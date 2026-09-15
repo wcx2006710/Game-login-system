@@ -20,6 +20,10 @@ async function sha256(text) {
 
 // 读取用户列表（懒初始化）
 async function getUsers() {
+  if (typeof my_kv === 'undefined' || !my_kv) {
+    throw new Error('KV_UNAVAILABLE');
+  }
+
   const raw = await my_kv.get('users');
   if (raw) {
     return JSON.parse(raw).map((user, index) => ({
@@ -69,7 +73,17 @@ export async function onRequestPost({ request }) {
     return jsonResponse({ success: false, error: '请输入用户名和密码' }, 400);
   }
 
-  const users = await getUsers();
+  let users;
+  try {
+    users = await getUsers();
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      code: 'KV_UNAVAILABLE',
+      error: '云端 KV 未绑定或不可用，请检查变量名 my_kv'
+    }, 503);
+  }
+
   const passwordHash = await sha256(password);
   const user = users.find(u => u.username === username && u.passwordHash === passwordHash);
 
@@ -83,12 +97,20 @@ export async function onRequestPost({ request }) {
 
   // 登录成功：生成会话并写入 KV + Cookie
   const sessionId = crypto.randomUUID();
-  await my_kv.put(`session:${sessionId}`, JSON.stringify({
-    id: user.id,
-    username: user.username,
-    email: user.email,
-    expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000
-  }));
+  try {
+    await my_kv.put(`session:${sessionId}`, JSON.stringify({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      expiresAt: Date.now() + SESSION_MAX_AGE_SECONDS * 1000
+    }));
+  } catch (error) {
+    return jsonResponse({
+      success: false,
+      code: 'KV_UNAVAILABLE',
+      error: '云端 KV 写入失败，请检查绑定配置'
+    }, 503);
+  }
 
   return jsonResponse({ success: true, redirect: '/success.html' }, 200, {
     'Set-Cookie': createSessionCookie(sessionId, request)

@@ -37,6 +37,7 @@ login-system/
 │   ├── login.js               # POST /login
 │   ├── logout.js              # POST /logout
 │   └── api/
+│       ├── health.js          # GET /api/health
 │       ├── current-user.js    # GET /api/current-user
 │       └── users.js           # GET /api/users
 ├── public/                    # 静态页面（云端输出目录）
@@ -57,6 +58,7 @@ login-system/
 | POST | /logout | 登出 | {success} |
 | GET | /api/current-user | 当前用户 | {loggedIn, user} |
 | GET | /api/users | 用户列表（需登录） | [{id, username, email, created_at}] |
+| GET | /api/health | 云端 KV 诊断 | {ok, kv}；未绑定返回 503 |
 
 ## 测试账号
 | 用户名 | 密码 |

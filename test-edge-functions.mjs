@@ -18,6 +18,7 @@ const login = await import('./edge-functions/login.js');
 const logout = await import('./edge-functions/logout.js');
 const currentUser = await import('./edge-functions/api/current-user.js');
 const usersApi = await import('./edge-functions/api/users.js');
+const healthApi = await import('./edge-functions/api/health.js');
 
 let pass = 0, fail = 0;
 function assert(name, cond) {
@@ -122,7 +123,26 @@ const expiredRes = await currentUser.onRequestGet({
 assert('过期会话已失效', (await parseJson(expiredRes)).loggedIn === false);
 assert('过期会话已从 KV 清理', !kvStore.has(`session:${expiredSessionId}`));
 
-// --- 测试9：密码哈希正确性（与代码内置哈希一致） ---
+// --- 测试9：KV 健康检查与明确错误响应 ---
+kvStore.clear();
+const healthRes = await healthApi.onRequestGet();
+assert('KV 健康检查正常', healthRes.status === 200 && (await parseJson(healthRes)).kv === true);
+
+const originalKv = globalThis.my_kv;
+delete globalThis.my_kv;
+const unhealthyRes = await healthApi.onRequestGet();
+assert('KV 未绑定时返回明确错误', unhealthyRes.status === 503 && (await parseJson(unhealthyRes)).code === 'KV_UNAVAILABLE');
+const unavailableLoginRes = await login.onRequestPost({
+  request: {
+    url: 'https://example.com/login',
+    json: async () => ({ username: 'wcx', password: 'dashuaige' }),
+    headers: { get: () => '' }
+  }
+});
+assert('KV 未绑定时登录不再返回 545', unavailableLoginRes.status === 503);
+globalThis.my_kv = originalKv;
+
+// --- 测试10：密码哈希正确性（与代码内置哈希一致） ---
 assert('dashuaige 哈希匹配', sha256('dashuaige') === '2f8c5ef83921f63e1e5b353b55dbaed44c68f87b811d469bbd167d3b867bd3a8');
 assert('123456 哈希匹配', sha256('123456') === '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92');
 assert('test123 哈希匹配', sha256('test123') === 'ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae');

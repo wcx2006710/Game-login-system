@@ -78,6 +78,7 @@ npm test
 |------|------|------|
 | `edge-functions/login.js` | POST /login | 登录认证 |
 | `edge-functions/logout.js` | POST /logout | 退出登录 |
+| `edge-functions/api/health.js` | GET /api/health | 云端 KV 健康检查 |
 | `edge-functions/api/current-user.js` | GET /api/current-user | 获取当前登录用户 |
 | `edge-functions/api/users.js` | GET /api/users | 获取用户列表（需登录） |
 
