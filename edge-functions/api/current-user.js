@@ -48,6 +48,50 @@ async function getSession(sessionId) {
   return session;
 }
 
+function normalizeRole(value, fallback = 'user') {
+  return value === 'admin' || value === 'user' ? value : fallback;
+}
+
+function publicUser(row, fallbackId) {
+  return {
+    id: row.id ?? fallbackId ?? null,
+    username: row.username,
+    email: row.email || '',
+    role: normalizeRole(row.role),
+    created_at: row.created_at || row.createdAt || ''
+  };
+}
+
+// 旧数据补 role：默认 admin 账号视为管理员
+function withRole(user, index) {
+  return {
+    ...user,
+    id: user.id ?? index + 1,
+    role: normalizeRole(user.role, user.username === 'admin' ? 'admin' : 'user'),
+    created_at: user.created_at || user.createdAt || ''
+  };
+}
+
+// 角色实时取自用户列表，保证管理员改了角色后立即生效
+async function resolveUser(session) {
+  const raw = await my_kv.get('users');
+  const users = raw ? JSON.parse(raw).map(withRole) : null;
+
+  const found = Array.isArray(users)
+    ? users.find((item) => item.id === session.id) || users.find((item) => item.username === session.username)
+    : null;
+
+  if (found) return publicUser(found, session.id);
+
+  return {
+    id: session.id ?? null,
+    username: session.username,
+    email: session.email || '',
+    role: normalizeRole(session.role),
+    created_at: session.created_at || ''
+  };
+}
+
 export async function onRequestGet({ request }) {
   const sessionId = getSessionId(request);
 
@@ -62,14 +106,7 @@ export async function onRequestGet({ request }) {
   try {
     const session = await getSession(sessionId);
     if (session) {
-      return jsonResponse({
-        loggedIn: true,
-        user: {
-          id: session.id,
-          username: session.username,
-          email: session.email
-        }
-      });
+      return jsonResponse({ loggedIn: true, user: await resolveUser(session) });
     }
   } catch (error) {
     return kvUnavailableResponse();

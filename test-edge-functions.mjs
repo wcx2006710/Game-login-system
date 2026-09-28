@@ -19,6 +19,20 @@ const logout = await import('./edge-functions/logout.js');
 const currentUser = await import('./edge-functions/api/current-user.js');
 const usersApi = await import('./edge-functions/api/users.js');
 const healthApi = await import('./edge-functions/api/health.js');
+const register = await import('./edge-functions/register.js');
+const userById = await import('./edge-functions/api/users/[id].js');
+const profileApi = await import('./edge-functions/api/profile.js');
+const changePasswordApi = await import('./edge-functions/api/change-password.js');
+
+// 请求桩
+const getReq = (cookie = '') => ({
+  request: { url: 'https://example.com/', headers: { get: () => cookie } }
+});
+const postReq = (body, cookie = '') => ({
+  request: { url: 'https://example.com/', json: async () => body, headers: { get: () => cookie } }
+});
+const sessionCookieOf = (response) =>
+  `session_id=${response.headers.get('Set-Cookie').match(/session_id=([^;]+)/)[1]}`;
 
 let pass = 0, fail = 0;
 function assert(name, cond) {
@@ -170,6 +184,165 @@ globalThis.my_kv = originalKv;
 assert('dashuaige 哈希匹配', sha256('dashuaige') === '2f8c5ef83921f63e1e5b353b55dbaed44c68f87b811d469bbd167d3b867bd3a8');
 assert('123456 哈希匹配', sha256('123456') === '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92');
 assert('test123 哈希匹配', sha256('test123') === 'ecd71870d1963316a97e3ac3408c9835ad8cf0f3c1bc703527c30265534f75ae');
+
+// ==================== 注册 / 用户管理 / 个人中心 ====================
+
+// --- 测试11：云端注册 ---
+kvStore.clear();
+
+assert('注册：非法用户名返回 400',
+  (await register.onRequestPost(postReq({ username: 'ab', password: 'secret123' }))).status === 400);
+assert('注册：密码过短返回 400',
+  (await register.onRequestPost(postReq({ username: 'weakuser', password: '123' }))).status === 400);
+assert('注册：邮箱格式错误返回 400',
+  (await register.onRequestPost(postReq({ username: 'badmail', password: 'secret123', email: 'nope' }))).status === 400);
+
+const regOk = await register.onRequestPost(
+  postReq({ username: 'clouduser', password: 'cloud-pass-123', email: 'Cloud@Test.com' })
+);
+const regOkData = await parseJson(regOk);
+assert('注册：成功返回 201', regOk.status === 201 && regOkData.success === true);
+assert('注册：角色为普通用户', regOkData.user.role === 'user');
+assert('注册：邮箱小写归一', regOkData.user.email === 'cloud@test.com');
+assert('注册：返回登录页跳转', regOkData.redirect === '/login.html');
+
+assert('注册：重复用户名返回 409',
+  (await register.onRequestPost(postReq({ username: 'clouduser', password: 'another-pass' }))).status === 409);
+assert('注册：重复邮箱返回 409',
+  (await register.onRequestPost(postReq({ username: 'otheruser', password: 'another-pass', email: 'cloud@test.com' }))).status === 409);
+
+// --- 测试12：注册的账号可以登录并拿到角色 ---
+const cloudLogin = await login.onRequestPost(postReq({ username: 'clouduser', password: 'cloud-pass-123' }));
+assert('注册的新账号可以登录', cloudLogin.status === 200);
+const cloudCookie = sessionCookieOf(cloudLogin);
+
+const cloudCu = await parseJson(await currentUser.onRequestGet(getReq(cloudCookie)));
+assert('current-user 返回 role=user', cloudCu.loggedIn === true && cloudCu.user.role === 'user');
+
+// --- 测试13：普通用户与未登录不能管理用户 ---
+assert('普通用户建用户返回 403',
+  (await usersApi.onRequestPost(postReq({ username: 'nobody', password: 'nobody123' }, cloudCookie))).status === 403);
+assert('未登录建用户返回 401',
+  (await usersApi.onRequestPost(postReq({ username: 'nobody', password: 'nobody123' }))).status === 401);
+
+// --- 测试14：管理员登录、角色与列表 ---
+const adminLogin = await login.onRequestPost(postReq({ username: 'admin', password: '123456' }));
+assert('admin 登录成功', adminLogin.status === 200);
+const adminCookie = sessionCookieOf(adminLogin);
+
+const adminCu = await parseJson(await currentUser.onRequestGet(getReq(adminCookie)));
+assert('admin 角色为 admin', adminCu.user.role === 'admin');
+
+const listWithRole = await parseJson(await usersApi.onRequestGet(getReq(adminCookie)));
+assert('用户列表带 role 字段', listWithRole.every((u) => u.role === 'user' || u.role === 'admin'));
+assert('用户列表不泄露密码哈希', listWithRole.every((u) => !u.passwordHash && !u.password));
+assert('默认 admin 在列表中角色为 admin',
+  listWithRole.find((u) => u.username === 'admin')?.role === 'admin');
+
+// --- 测试15：管理员新增用户 ---
+const adminCreate = await usersApi.onRequestPost(postReq({
+  username: 'cloud_bob', password: 'bob-pass-123', email: 'bob@cloud.com', role: 'user'
+}, adminCookie));
+const bob = await parseJson(adminCreate);
+assert('管理员建用户返回 201', adminCreate.status === 201 && bob.username === 'cloud_bob');
+const bobId = bob.id;
+
+assert('管理员建重名用户返回 409',
+  (await usersApi.onRequestPost(postReq({ username: 'cloud_bob', password: 'bob-pass-123' }, adminCookie))).status === 409);
+
+// --- 测试16：管理员修改用户 ---
+const putRole = await userById.onRequestPut({
+  ...postReq({ email: 'bob2@cloud.com', role: 'admin' }, adminCookie),
+  params: { id: String(bobId) }
+});
+const putRoleData = await parseJson(putRole);
+assert('管理员改角色与邮箱',
+  putRole.status === 200 && putRoleData.role === 'admin' && putRoleData.email === 'bob2@cloud.com');
+
+const putPassword = await userById.onRequestPut({
+  ...postReq({ password: 'new-cloud-pass' }, adminCookie),
+  params: { id: String(bobId) }
+});
+assert('管理员重置密码返回 200', putPassword.status === 200);
+
+assert('重置后新密码可登录',
+  (await login.onRequestPost(postReq({ username: 'cloud_bob', password: 'new-cloud-pass' }))).status === 200);
+assert('重置后旧密码失效',
+  (await login.onRequestPost(postReq({ username: 'cloud_bob', password: 'bob-pass-123' }))).status === 401);
+
+// --- 测试17：管理员操作护栏 ---
+const adminId = listWithRole.find((u) => u.username === 'admin').id;
+
+assert('不能取消自己的管理员权限',
+  (await userById.onRequestPut({
+    ...postReq({ role: 'user' }, adminCookie),
+    params: { id: String(adminId) }
+  })).status === 400);
+
+assert('不能删除当前登录账号',
+  (await userById.onRequestDelete({ ...getReq(adminCookie), params: { id: String(adminId) } })).status === 400);
+
+const bobLoginForGuard = await login.onRequestPost(postReq({ username: 'cloud_bob', password: 'new-cloud-pass' }));
+const bobCookie = sessionCookieOf(bobLoginForGuard);
+assert('默认 admin 账号不可删除',
+  (await userById.onRequestDelete({ ...getReq(bobCookie), params: { id: String(adminId) } })).status === 400);
+
+assert('删除不存在的用户返回 404',
+  (await userById.onRequestDelete({ ...getReq(adminCookie), params: { id: '99999' } })).status === 404);
+
+// --- 测试18：管理员删除用户 ---
+const deleteBob = await userById.onRequestDelete({ ...getReq(adminCookie), params: { id: String(bobId) } });
+assert('管理员删除用户返回 200', deleteBob.status === 200 && (await parseJson(deleteBob)).success === true);
+
+const listAfterDelete = await parseJson(await usersApi.onRequestGet(getReq(adminCookie)));
+assert('删除后列表不再包含该用户', !listAfterDelete.some((u) => u.id === bobId));
+
+// --- 测试19：个人中心改邮箱 ---
+assert('个人中心：邮箱格式错误返回 400',
+  (await profileApi.onRequestPut({ ...postReq({ email: 'not-an-email' }, cloudCookie) })).status === 400);
+assert('个人中心：邮箱被占用返回 409',
+  (await profileApi.onRequestPut({ ...postReq({ email: 'admin@example.com' }, cloudCookie) })).status === 409);
+assert('个人中心：未登录返回 401',
+  (await profileApi.onRequestPut(postReq({ email: 'x@y.com' }))).status === 401);
+
+const profileOk = await profileApi.onRequestPut({ ...postReq({ email: 'CloudNew@Test.com' }, cloudCookie) });
+const profileOkData = await parseJson(profileOk);
+assert('个人中心：改邮箱成功且小写归一',
+  profileOk.status === 200 && profileOkData.user.email === 'cloudnew@test.com');
+
+// --- 测试20：个人中心改密码 ---
+assert('改密码：当前密码错误返回 400',
+  (await changePasswordApi.onRequestPost(postReq({
+    currentPassword: 'wrong-pass', newPassword: 'brand-new-pass'
+  }, cloudCookie))).status === 400);
+assert('改密码：新密码过短返回 400',
+  (await changePasswordApi.onRequestPost(postReq({
+    currentPassword: 'cloud-pass-123', newPassword: '123'
+  }, cloudCookie))).status === 400);
+assert('改密码：新旧相同返回 400',
+  (await changePasswordApi.onRequestPost(postReq({
+    currentPassword: 'cloud-pass-123', newPassword: 'cloud-pass-123'
+  }, cloudCookie))).status === 400);
+assert('改密码：未登录返回 401',
+  (await changePasswordApi.onRequestPost(postReq({
+    currentPassword: 'a', newPassword: 'bbbbbb'
+  }))).status === 401);
+
+const cpOk = await changePasswordApi.onRequestPost(postReq({
+  currentPassword: 'cloud-pass-123', newPassword: 'brand-new-pass'
+}, cloudCookie));
+assert('改密码：成功返回 200', cpOk.status === 200 && (await parseJson(cpOk)).success === true);
+
+assert('改密码后旧密码失效',
+  (await login.onRequestPost(postReq({ username: 'clouduser', password: 'cloud-pass-123' }))).status === 401);
+assert('改密码后新密码可登录',
+  (await login.onRequestPost(postReq({ username: 'clouduser', password: 'brand-new-pass' }))).status === 200);
+
+// --- 测试21：三份默认账号副本必须一致 ---
+assert('login.js 与 api/users.js 的默认账号一致',
+  JSON.stringify(login.DEFAULT_USERS) === JSON.stringify(usersApi.DEFAULT_USERS));
+assert('login.js 与 register.js 的默认账号一致',
+  JSON.stringify(login.DEFAULT_USERS) === JSON.stringify(register.DEFAULT_USERS));
 
 console.log(`\n测试结果：${pass} 通过，${fail} 失败`);
 process.exit(fail > 0 ? 1 : 0);
