@@ -44,6 +44,17 @@
       font-size: 14px;
     }
     .logout-btn:hover { background: #ff7875; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .link-btn {
+      padding: 8px 18px;
+      background: #fff;
+      color: #333;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      text-decoration: none;
+    }
+    .link-btn:hover { border-color: #1890ff; color: #1890ff; }
     .card {
       background: #fff;
       padding: 24px 30px;
@@ -75,6 +86,19 @@
       border-radius: 10px;
       font-size: 12px;
     }
+    .badge-admin { background: #f9f0ff; color: #722ed1; }
+    .role-badge {
+      display: none;
+      margin-left: 8px;
+      padding: 2px 10px;
+      background: #f9f0ff;
+      color: #722ed1;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      vertical-align: middle;
+    }
+    .role-badge.show { display: inline-block; }
   </style>
 </head>
 <body>
@@ -83,11 +107,20 @@
       <div class="welcome">
         <div class="avatar" id="userAvatar">U</div>
         <div class="welcome-text">
-          <h1>登录成功！欢迎回来</h1>
+          <h1>登录成功！欢迎回来<span class="role-badge" id="userRole">管理员</span></h1>
           <p id="userInfo">加载中...</p>
         </div>
       </div>
-      <button class="logout-btn" onclick="logout()">退出登录</button>
+      <div class="header-actions">
+        <a class="link-btn" href="/profile.html">个人中心</a>
+        <button class="logout-btn" onclick="logout()">退出登录</button>
+      </div>
+    </div>
+
+    <div class="card" id="adminCard" style="margin-bottom:20px;display:none;">
+      <h2>🛠️ 管理区</h2>
+      <p style="color:#666;font-size:14px;margin-bottom:16px;">当前账号拥有管理员权限，可以新增、编辑和删除用户账号。</p>
+      <a href="/admin.html" style="display:inline-block;padding:10px 28px;background:#722ed1;color:#fff;border-radius:6px;text-decoration:none;font-size:15px;">进入用户管理后台 →</a>
     </div>
 
     <div class="card" style="margin-bottom:20px;">
@@ -144,10 +177,17 @@
           return;
         }
 
+        const isAdmin = data.user.role === 'admin';
+
         document.getElementById('userInfo').textContent =
-          `用户名：${data.user.username} | 邮箱：${data.user.email || '未填写'}`;
+          `用户名：${data.user.username} | 邮箱：${data.user.email || '未填写'} | 角色：${isAdmin ? '管理员' : '普通用户'}`;
         document.getElementById('userAvatar').textContent =
           data.user.username.charAt(0).toUpperCase();
+
+        if (isAdmin) {
+          document.getElementById('userRole').classList.add('show');
+          document.getElementById('adminCard').style.display = 'block';
+        }
       } catch (error) {
         document.getElementById('userInfo').textContent = '登录状态加载失败';
       }

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <title>个人中心</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+
+    .header {
+      background: #fff;
+      padding: 24px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .welcome { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 48px; height: 48px;
+      background: #1890ff;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 20px; font-weight: bold;
+      flex-shrink: 0;
+    }
+    .welcome-text h1 { font-size: 20px; color: #333; }
+    .welcome-text p { font-size: 13px; color: #888; margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .link-btn {
+      padding: 8px 18px;
+      background: #fff;
+      color: #333;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .link-btn:hover { border-color: #1890ff; color: #1890ff; }
+    .logout-btn {
+      padding: 8px 20px;
+      background: #ff4d4f;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .logout-btn:hover { background: #ff7875; }
+
+    .card {
+      background: #fff;
+      padding: 24px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 { font-size: 18px; color: #333; margin-bottom: 16px; }
+
+    .info-list { font-size: 14px; }
+    .info-row {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-label { width: 100px; color: #888; flex-shrink: 0; }
+    .info-value { color: #333; word-break: break-all; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #e6f7ff;
+      color: #1890ff;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+    .badge-admin { background: #f9f0ff; color: #722ed1; }
+
+    .field { margin-bottom: 16px; }
+    .field label { display: block; margin-bottom: 6px; color: #666; font-size: 13px; }
+    .field input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    .field input:focus { border-color: #1890ff; }
+    .field .hint { margin-top: 6px; font-size: 12px; color: #aaa; }
+    .actions { display: flex; align-items: center; gap: 12px; }
+    .actions button {
+      padding: 10px 26px;
+      background: #1890ff;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .actions button:hover:not(:disabled) { background: #40a9ff; }
+    .actions button:disabled { background: #a3d3ff; cursor: not-allowed; }
+
+    .message {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .message.show { display: block; }
+    .message.error { background: #fff1f0; color: #cf1322; border: 1px solid #ffccc7; }
+    .message.success { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="welcome">
+        <div class="avatar" id="userAvatar">U</div>
+        <div class="welcome-text">
+          <h1>个人中心</h1>
+          <p id="welcomeSub">加载中...</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="link-btn" href="/success.html">返回主页</a>
+        <button class="logout-btn" id="logoutBtn">退出登录</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>账号信息</h2>
+      <div class="info-list">
+        <div class="info-row">
+          <div class="info-label">用户名</div>
+          <div class="info-value" id="infoUsername">-</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">角色</div>
+          <div class="info-value" id="infoRole">-</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">邮箱</div>
+          <div class="info-value" id="infoEmail">-</div>
+        </div>
+        <div class="info-row">
+          <div class="info-label">注册时间</div>
+          <div class="info-value" id="infoCreatedAt">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>修改邮箱</h2>
+      <form id="emailForm" novalidate>
+        <div class="field">
+          <label for="email">新邮箱</label>
+          <input type="email" id="email" autocomplete="email" placeholder="留空表示清除邮箱">
+          <div class="hint">邮箱用于账号标识，不能与其他账号重复。</div>
+        </div>
+        <div class="actions">
+          <button type="submit" id="emailSubmit">保存邮箱</button>
+        </div>
+      </form>
+      <div class="message" id="emailMessage"></div>
+    </div>
+
+    <div class="card">
+      <h2>修改密码</h2>
+      <form id="passwordForm" novalidate>
+        <div class="field">
+          <label for="currentPassword">当前密码</label>
+          <input type="password" id="currentPassword" autocomplete="current-password" placeholder="请输入当前密码">
+        </div>
+        <div class="field">
+          <label for="newPassword">新密码</label>
+          <input type="password" id="newPassword" autocomplete="new-password" placeholder="至少 6 位">
+        </div>
+        <div class="field">
+          <label for="confirmPassword">确认新密码</label>
+          <input type="password" id="confirmPassword" autocomplete="new-password" placeholder="再次输入新密码">
+        </div>
+        <div class="actions">
+          <button type="submit" id="passwordSubmit">更新密码</button>
+        </div>
+      </form>
+      <div class="message" id="passwordMessage"></div>
+    </div>
+  </div>
+
+  <script>
+    const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const MIN_PASSWORD_LENGTH = 6;
+
+    const emailForm = document.getElementById('emailForm');
+    const passwordForm = document.getElementById('passwordForm');
+    const emailMessage = document.getElementById('emailMessage');
+    const passwordMessage = document.getElementById('passwordMessage');
+    const emailSubmit = document.getElementById('emailSubmit');
+    const passwordSubmit = document.getElementById('passwordSubmit');
+
+    function redirectToLogin() { window.location.href = '/login.html'; }
+
+    async function requestJson(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      return { response, data };
+    }
+
+    function setMessage(box, text, type) {
+      box.textContent = text;
+      box.className = `message show ${type}`;
+    }
+
+    function clearMessage(box) {
+      box.className = 'message';
+    }
+
+    function renderUser(user) {
+      const isAdmin = user.role === 'admin';
+
+      document.getElementById('userAvatar').textContent =
+        user.username.charAt(0).toUpperCase();
+      document.getElementById('welcomeSub').textContent =
+        `${user.username}（${isAdmin ? '管理员' : '普通用户'}）`;
+      document.getElementById('infoUsername').textContent = user.username;
+      document.getElementById('infoEmail').textContent = user.email || '未填写';
+      document.getElementById('infoCreatedAt').textContent = user.created_at || '-';
+      document.getElementById('email').value = user.email || '';
+
+      const roleBox = document.getElementById('infoRole');
+      roleBox.replaceChildren();
+      const badge = document.createElement('span');
+      badge.className = isAdmin ? 'badge badge-admin' : 'badge';
+      badge.textContent = isAdmin ? '管理员' : '普通用户';
+      roleBox.appendChild(badge);
+    }
+
+    emailForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage(emailMessage);
+
+      const email = document.getElementById('email').value.trim();
+      if (email && !EMAIL_PATTERN.test(email)) {
+        setMessage(emailMessage, '邮箱格式不正确', 'error');
+        return;
+      }
+
+      emailSubmit.disabled = true;
+      try {
+        const { response, data } = await requestJson('/api/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+
+        if (response.status === 401) { redirectToLogin(); return; }
+        if (!response.ok) {
+          setMessage(emailMessage, data.error || `保存失败（HTTP ${response.status}）`, 'error');
+          return;
+        }
+
+        renderUser(data.user);
+        setMessage(emailMessage, '邮箱已更新', 'success');
+      } catch (error) {
+        setMessage(emailMessage, '无法连接服务器，请确认服务已启动', 'error');
+      } finally {
+        emailSubmit.disabled = false;
+      }
+    });
+
+    passwordForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearMessage(passwordMessage);
+
+      const currentPassword = document.getElementById('currentPassword').value;
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!currentPassword) {
+        setMessage(passwordMessage, '请输入当前密码', 'error');
+        return;
+      }
+      if (newPassword.length < MIN_PASSWORD_LENGTH) {
+        setMessage(passwordMessage, `新密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setMessage(passwordMessage, '两次输入的新密码不一致', 'error');
+        return;
+      }
+      if (newPassword === currentPassword) {
+        setMessage(passwordMessage, '新密码不能与当前密码相同', 'error');
+        return;
+      }
+
+      passwordSubmit.disabled = true;
+      try {
+        const { response, data } = await requestJson('/api/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        if (response.status === 401) { redirectToLogin(); return; }
+        if (!response.ok) {
+          setMessage(passwordMessage, data.error || `更新失败（HTTP ${response.status}）`, 'error');
+          return;
+        }
+
+        passwordForm.reset();
+        setMessage(passwordMessage, data.message || '密码已更新', 'success');
+      } catch (error) {
+        setMessage(passwordMessage, '无法连接服务器，请确认服务已启动', 'error');
+      } finally {
+        passwordSubmit.disabled = false;
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/logout', { method: 'POST' });
+      } finally {
+        redirectToLogin();
+      }
+    });
+
+    (async function init() {
+      const { response, data } = await requestJson('/api/current-user');
+
+      if (!response.ok || !data.loggedIn) { redirectToLogin(); return; }
+      renderUser(data.user);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <title>用户管理后台</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; }
+
+    .header {
+      background: #fff;
+      padding: 24px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .welcome { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 48px; height: 48px;
+      background: #722ed1;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 20px; font-weight: bold;
+      flex-shrink: 0;
+    }
+    .welcome-text h1 { font-size: 20px; color: #333; }
+    .welcome-text p { font-size: 13px; color: #888; margin-top: 2px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .link-btn {
+      padding: 8px 18px;
+      background: #fff;
+      color: #333;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .link-btn:hover { border-color: #722ed1; color: #722ed1; }
+    .logout-btn {
+      padding: 8px 20px;
+      background: #ff4d4f;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .logout-btn:hover { background: #ff7875; }
+
+    .card {
+      background: #fff;
+      padding: 24px 30px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+    .card h2 { font-size: 18px; color: #333; margin-bottom: 16px; }
+    .card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .card-head h2 { margin-bottom: 0; }
+    .count { font-size: 13px; color: #999; }
+
+    .user-form {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 16px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      margin-bottom: 6px;
+      color: #666;
+      font-size: 13px;
+    }
+    .field input, .field select {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+      transition: border-color 0.3s;
+    }
+    .field input:focus, .field select:focus { border-color: #722ed1; }
+    .field input:disabled { background: #f5f5f5; color: #999; cursor: not-allowed; }
+    .form-actions { display: flex; gap: 10px; }
+    .form-actions button {
+      padding: 9px 22px;
+      background: #722ed1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .form-actions button:hover:not(:disabled) { background: #9254de; }
+    .form-actions button:disabled { background: #c9a6ea; cursor: not-allowed; }
+    .form-actions button.ghost {
+      background: #fff;
+      color: #666;
+      border: 1px solid #d9d9d9;
+    }
+    .form-actions button.ghost:hover { border-color: #722ed1; color: #722ed1; }
+
+    .message {
+      display: none;
+      margin-top: 16px;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .message.show { display: block; }
+    .message.error { background: #fff1f0; color: #cf1322; border: 1px solid #ffccc7; }
+    .message.success { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #f0f0f0; }
+    th { background: #fafafa; color: #666; font-weight: 600; white-space: nowrap; }
+    tr:hover td { background: #f9f9f9; }
+    td.empty { text-align: center; color: #999; }
+    .badge {
+      display: inline-block;
+      padding: 2px 10px;
+      background: #e6f7ff;
+      color: #1890ff;
+      border-radius: 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    .badge-admin { background: #f9f0ff; color: #722ed1; }
+    .mini {
+      padding: 4px 12px;
+      margin-right: 6px;
+      background: #fff;
+      color: #1890ff;
+      border: 1px solid #91d5ff;
+      border-radius: 4px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mini:hover:not(:disabled) { background: #e6f7ff; }
+    .mini.danger { color: #ff4d4f; border-color: #ffa39e; }
+    .mini.danger:hover:not(:disabled) { background: #fff1f0; }
+    .mini:disabled { color: #bfbfbf; border-color: #e8e8e8; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="welcome">
+        <div class="avatar" id="userAvatar">A</div>
+        <div class="welcome-text">
+          <h1>用户管理后台</h1>
+          <p id="currentUser">加载中...</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="link-btn" href="/success.html">返回主页</a>
+        <button class="logout-btn" id="logoutBtn">退出登录</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 id="formTitle">新增用户</h2>
+      <form id="userForm" class="user-form" novalidate>
+        <div class="field">
+          <label for="username">用户名</label>
+          <input type="text" id="username" autocomplete="off" placeholder="3-20 位字母数字下划线">
+        </div>
+        <div class="field">
+          <label for="password">密码</label>
+          <input type="password" id="password" autocomplete="new-password" placeholder="至少 6 位">
+        </div>
+        <div class="field">
+          <label for="email">邮箱</label>
+          <input type="email" id="email" autocomplete="off" placeholder="选填">
+        </div>
+        <div class="field">
+          <label for="role">角色</label>
+          <select id="role">
+            <option value="user">普通用户</option>
+            <option value="admin">管理员</option>
+          </select>
+        </div>
+        <div class="form-actions">
+          <button type="submit" id="submitBtn">新增用户</button>
+          <button type="button" id="cancelBtn" class="ghost" hidden>取消编辑</button>
+        </div>
+      </form>
+      <div class="message" id="formMessage"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <h2>用户列表</h2>
+        <span class="count" id="userCount"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>用户名</th>
+              <th>邮箱</th>
+              <th>角色</th>
+              <th>注册时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="userTable">
+            <tr><td colspan="6" class="empty">加载中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
+    const MIN_PASSWORD_LENGTH = 6;
+
+    const form = document.getElementById('userForm');
+    const messageBox = document.getElementById('formMessage');
+    const submitButton = document.getElementById('submitBtn');
+    const cancelButton = document.getElementById('cancelBtn');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const emailInput = document.getElementById('email');
+    const roleSelect = document.getElementById('role');
+    const tableBody = document.getElementById('userTable');
+
+    let currentUserId = null;
+    let editingUserId = null;
+    let users = [];
+
+    function redirectToLogin() { window.location.href = '/login.html'; }
+    function redirectToHome() { window.location.href = '/success.html'; }
+
+    async function requestJson(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => ({}));
+      return { response, data };
+    }
+
+    function showFormMessage(text, type) {
+      messageBox.textContent = text;
+      messageBox.className = `message show ${type}`;
+    }
+
+    function clearFormMessage() {
+      messageBox.className = 'message';
+    }
+
+    function showTableMessage(text) {
+      tableBody.replaceChildren();
+      const row = document.createElement('tr');
+      const cell = document.createElement('td');
+      cell.colSpan = 6;
+      cell.className = 'empty';
+      cell.textContent = text;
+      row.appendChild(cell);
+      tableBody.appendChild(row);
+    }
+
+    function appendTextCell(row, value) {
+      const cell = document.createElement('td');
+      cell.textContent = String(value);
+      row.appendChild(cell);
+    }
+
+    function resetForm() {
+      form.reset();
+      editingUserId = null;
+      usernameInput.disabled = false;
+      passwordInput.placeholder = `至少 ${MIN_PASSWORD_LENGTH} 位`;
+      document.getElementById('formTitle').textContent = '新增用户';
+      submitButton.textContent = '新增用户';
+      cancelButton.hidden = true;
+      clearFormMessage();
+    }
+
+    function startEdit(user) {
+      form.reset();
+      editingUserId = user.id;
+      usernameInput.value = user.username;
+      usernameInput.disabled = true;
+      passwordInput.value = '';
+      passwordInput.placeholder = '留空表示不修改密码';
+      emailInput.value = user.email || '';
+      roleSelect.value = user.role === 'admin' ? 'admin' : 'user';
+
+      document.getElementById('formTitle').textContent = `编辑用户：${user.username}`;
+      submitButton.textContent = '保存修改';
+      cancelButton.hidden = false;
+      clearFormMessage();
+      form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    function renderUsers() {
+      tableBody.replaceChildren();
+      document.getElementById('userCount').textContent = `共 ${users.length} 个账号`;
+
+      if (users.length === 0) {
+        showTableMessage('暂无用户');
+        return;
+      }
+
+      for (const user of users) {
+        const row = document.createElement('tr');
+
+        appendTextCell(row, user.id);
+        appendTextCell(row, user.username);
+        appendTextCell(row, user.email || '-');
+
+        const roleCell = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = user.role === 'admin' ? 'badge badge-admin' : 'badge';
+        badge.textContent = user.role === 'admin' ? '管理员' : '普通用户';
+        roleCell.appendChild(badge);
+        row.appendChild(roleCell);
+
+        appendTextCell(row, user.created_at || '-');
+
+        const actionCell = document.createElement('td');
+
+        const editButton = document.createElement('button');
+        editButton.className = 'mini';
+        editButton.textContent = '编辑';
+        editButton.addEventListener('click', () => startEdit(user));
+        actionCell.appendChild(editButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.className = 'mini danger';
+        deleteButton.textContent = '删除';
+        const protectedAccount = user.id === currentUserId || user.username === 'admin';
+        deleteButton.disabled = protectedAccount;
+        if (protectedAccount) deleteButton.title = '该账号不可删除';
+        deleteButton.addEventListener('click', () => removeUser(user));
+        actionCell.appendChild(deleteButton);
+
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+      }
+    }
+
+    async function loadUsers() {
+      const { response, data } = await requestJson('/api/users');
+
+      if (response.status === 401) { redirectToLogin(); return; }
+      if (!response.ok || !Array.isArray(data)) {
+        showTableMessage('用户列表加载失败，请刷新后重试');
+        return;
+      }
+
+      users = data;
+      renderUsers();
+    }
+
+    async function removeUser(user) {
+      if (!window.confirm(`确定删除用户「${user.username}」？该操作不可撤销。`)) return;
+
+      const { response, data } = await requestJson(`/api/users/${user.id}`, { method: 'DELETE' });
+
+      if (response.status === 401) { redirectToLogin(); return; }
+      if (response.status === 403) { redirectToHome(); return; }
+      if (!response.ok) {
+        window.alert(data.error || `删除失败（HTTP ${response.status}）`);
+        return;
+      }
+
+      if (editingUserId === user.id) {
+        resetForm();
+      }
+      await loadUsers();
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      clearFormMessage();
+
+      const isEditing = editingUserId !== null;
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const email = emailInput.value.trim();
+      const role = roleSelect.value;
+
+      let url = '/api/users';
+      let method = 'POST';
+      let payload = { username, password, email, role };
+
+      if (isEditing) {
+        url = `/api/users/${editingUserId}`;
+        method = 'PUT';
+        payload = { email, role };
+        if (password) {
+          if (password.length < MIN_PASSWORD_LENGTH) {
+            showFormMessage(`密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+            return;
+          }
+          payload.password = password;
+        }
+      } else {
+        if (!USERNAME_PATTERN.test(username)) {
+          showFormMessage('用户名需为 3-20 位字母、数字或下划线', 'error');
+          return;
+        }
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          showFormMessage(`密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+          return;
+        }
+      }
+
+      submitButton.disabled = true;
+
+      try {
+        const { response, data } = await requestJson(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (response.status === 401) { redirectToLogin(); return; }
+        if (response.status === 403) { redirectToHome(); return; }
+        if (!response.ok) {
+          showFormMessage(data.error || `操作失败（HTTP ${response.status}）`, 'error');
+          return;
+        }
+
+        const successText = isEditing ? `用户「${username}」已更新` : `已新增用户「${data.username}」`;
+        resetForm();
+        showFormMessage(successText, 'success');
+        await loadUsers();
+      } catch (error) {
+        showFormMessage('无法连接服务器，请确认服务已启动', 'error');
+      } finally {
+        submitButton.disabled = false;
+      }
+    });
+
+    cancelButton.addEventListener('click', resetForm);
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/logout', { method: 'POST' });
+      } finally {
+        redirectToLogin();
+      }
+    });
+
+    (async function init() {
+      const { response, data } = await requestJson('/api/current-user');
+
+      if (!response.ok || !data.loggedIn) { redirectToLogin(); return; }
+      if (data.user.role !== 'admin') { redirectToHome(); return; }
+
+      currentUserId = data.user.id;
+      document.getElementById('currentUser').textContent =
+        `当前登录：${data.user.username}（管理员）`;
+      document.getElementById('userAvatar').textContent =
+        data.user.username.charAt(0).toUpperCase();
+
+      await loadUsers();
+    })();
+  </script>
+</body>
+</html>

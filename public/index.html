@@ -133,6 +133,20 @@
       transition: border-color 0.3s, background 0.3s;
     }
     .btn-secondary:hover { border-color: #fff; background: rgba(255,255,255,0.1); }
+    .btn-outline {
+      padding: 14px 40px;
+      background: transparent;
+      color: #667eea;
+      border: 2px solid #667eea;
+      border-radius: 30px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: background 0.3s, color 0.3s;
+    }
+    .btn-outline:hover { background: #667eea; color: #fff; }
 
     /* 浮动装饰 */
     .floating {
@@ -200,6 +214,7 @@
     .icon-orange { background: #fff4e6; }
     .icon-red { background: #ffe6e6; }
     .icon-cyan { background: #e6fcff; }
+    .icon-pink { background: #ffe6f0; }
     .feature-card h3 { font-size: 20px; margin-bottom: 10px; }
     .feature-card p { color: #666; font-size: 14px; line-height: 1.8; }
 
@@ -294,6 +309,7 @@
       <a href="#features">功能特性</a>
       <a href="#tech">技术栈</a>
       <a href="#accounts">测试账号</a>
+      <a href="/register.html">注册</a>
       <a href="/login.html" class="nav-btn">立即登录</a>
     </div>
   </nav>
@@ -322,7 +338,7 @@
   <!-- 功能特性 -->
   <section class="features" id="features">
     <h2 class="section-title">功能特性</h2>
-    <p class="section-subtitle">六大核心模块，前后端完整闭环</p>
+    <p class="section-subtitle">七大核心模块，前后端完整闭环</p>
     <div class="features-grid">
       <div class="feature-card">
         <div class="feature-icon icon-blue">🔐</div>
@@ -343,6 +359,11 @@
         <div class="feature-icon icon-purple">📊</div>
         <h3>用户数据表格</h3>
         <p>登录后展示数据库中的用户列表，包含 ID、用户名、邮箱、注册时间等字段。</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-pink">🆕</div>
+        <h3>注册与用户管理</h3>
+        <p>开放注册新账号，管理员可在后台新增、编辑、删除用户并分配角色；登录后还可在个人中心修改自己的邮箱与密码。</p>
       </div>
       <div class="feature-card">
         <div class="feature-icon icon-orange">🗄️</div>
@@ -380,13 +401,14 @@
     <p class="section-subtitle">使用以下任意账号登录体验</p>
     <div class="account-box">
       <table>
-        <tr><th>用户名</th><th>密码</th></tr>
-        <tr><td><code>wcx</code></td><td><code>dashuaige</code></td></tr>
-        <tr><td><code>admin</code></td><td><code>123456</code></td></tr>
-        <tr><td><code>test</code></td><td><code>test123</code></td></tr>
+        <tr><th>用户名</th><th>密码</th><th>角色</th></tr>
+        <tr><td><code>wcx</code></td><td><code>dashuaige</code></td><td>普通用户</td></tr>
+        <tr><td><code>admin</code></td><td><code>123456</code></td><td>管理员</td></tr>
+        <tr><td><code>test</code></td><td><code>test123</code></td><td>普通用户</td></tr>
       </table>
-      <div style="text-align:center;margin-top:30px;">
+      <div style="text-align:center;margin-top:30px;display:flex;gap:16px;justify-content:center;flex-wrap:wrap;">
         <a href="/login.html" class="btn-primary">前往登录 →</a>
+        <a href="/register.html" class="btn-outline">注册新账号</a>
       </div>
     </div>
   </section>
