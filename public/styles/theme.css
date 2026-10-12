@@ -1,0 +1,543 @@
+/*!
+ * theme.css - 游戏登录系统 统一设计系统
+ *
+ * 目标：把散落在 8 个页面内联 <style> 里的硬编码色值收敛为一套设计令牌，
+ *      统一为「科技感暗色玻璃拟态」风格。
+ *
+ * 接入方式：<link rel="stylesheet" href="/styles/theme.css"> 放在页面内联 <style> 之前，
+ *          页面内联样式优先，可按需覆盖。
+ */
+
+/* ============================================================
+   1. 设计令牌（Design Tokens）
+   ============================================================ */
+:root {
+  /* --- 品牌主色（统一自 #667eea） --- */
+  --c-primary: #667eea;
+  --c-primary-600: #5568d3;
+  --c-primary-400: #8b9df5;
+  --c-primary-soft: rgba(102, 126, 234, 0.16);
+  --c-primary-glow: rgba(102, 126, 234, 0.45);
+
+  /* --- 强调色 / 角色色 --- */
+  --c-accent: #764ba2;
+  --c-admin: #722ed1;
+  --c-admin-soft: rgba(114, 46, 209, 0.18);
+
+  /* --- 语义色 --- */
+  --c-info: #1890ff;
+  --c-success: #52c41a;
+  --c-warning: #faad14;
+  --c-danger: #ff4d4f;
+  --c-success-soft: rgba(82, 196, 26, 0.16);
+  --c-warning-soft: rgba(250, 173, 20, 0.16);
+  --c-danger-soft: rgba(255, 77, 79, 0.16);
+
+  /* --- 背景层 --- */
+  --bg-space: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --bg-space-fixed: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  --bg-0: #0b0b1a;
+  --bg-1: #141428;
+  --bg-2: #1c1c38;
+
+  /* --- 玻璃层 --- */
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-bg-strong: rgba(255, 255, 255, 0.1);
+  --glass-bg-hover: rgba(255, 255, 255, 0.13);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border-strong: rgba(255, 255, 255, 0.2);
+  --glass-blur: 16px;
+
+  /* --- 文字 --- */
+  --fg: #e8eaf2;
+  --fg-strong: #ffffff;
+  --fg-muted: rgba(232, 234, 242, 0.68);
+  --fg-dim: rgba(232, 234, 242, 0.42);
+
+  /* --- 圆角 --- */
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* --- 阴影 --- */
+  --sh-1: 0 2px 8px rgba(0, 0, 0, 0.28);
+  --sh-2: 0 8px 24px rgba(0, 0, 0, 0.36);
+  --sh-3: 0 16px 48px rgba(0, 0, 0, 0.48);
+  --sh-glow: 0 0 0 1px rgba(102, 126, 234, 0.35), 0 8px 32px rgba(102, 126, 234, 0.22);
+  --sh-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+
+  /* --- 间距 --- */
+  --sp-1: 8px;
+  --sp-2: 12px;
+  --sp-3: 16px;
+  --sp-4: 24px;
+  --sp-5: 40px;
+  --sp-6: 64px;
+
+  /* --- 字体 --- */
+  --font-sans: 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Courier New', monospace;
+
+  /* --- z-index 层级 --- */
+  --z-bg: -1;
+  --z-canvas: 1;
+  --z-content: 10;
+  --z-sticky: 50;
+  --z-toast: 1000;
+  --z-overlay: 1100;
+
+  /* --- 动效 --- */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --t-fast: 0.15s;
+  --t-base: 0.25s;
+  --t-slow: 0.4s;
+}
+
+/* ============================================================
+   2. 基础重置
+   ============================================================ */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--fg);
+  background: var(--bg-space);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.6;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  color: var(--fg-strong);
+  line-height: 1.3;
+  font-weight: 600;
+}
+
+p {
+  color: var(--fg-muted);
+}
+
+a {
+  color: var(--c-primary-400);
+  text-decoration: none;
+  transition: color var(--t-base) var(--ease);
+}
+
+a:hover {
+  color: var(--fg-strong);
+}
+
+code,
+kbd,
+pre {
+  font-family: var(--font-mono);
+}
+
+::selection {
+  background: var(--c-primary-glow);
+  color: #fff;
+}
+
+/* 暗色滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-0);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: var(--r-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+/* ============================================================
+   3. 布局
+   ============================================================ */
+.container {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 var(--sp-4);
+}
+
+.grid {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.flex {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   4. 玻璃卡片
+   ============================================================ */
+.glass-card {
+  position: relative;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-2), var(--sh-inset);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  padding: var(--sp-4);
+  transition: border-color var(--t-base) var(--ease), transform var(--t-base) var(--ease),
+    box-shadow var(--t-base) var(--ease);
+}
+
+.glass-card:hover {
+  border-color: var(--glass-border-strong);
+}
+
+.glass-card--lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sh-3), var(--sh-inset);
+}
+
+/* 顶部高光描边 */
+.glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  pointer-events: none;
+}
+
+/* ============================================================
+   5. 按钮
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  padding: 10px 20px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: all var(--t-base) var(--ease);
+  white-space: nowrap;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-strong);
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);
+  border-color: transparent;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--c-primary-600) 0%, #5d3a80 100%);
+  box-shadow: var(--sh-glow);
+}
+
+.btn-ghost {
+  background: transparent;
+}
+
+.btn-danger {
+  color: #fff;
+  background: var(--c-danger);
+  border-color: transparent;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #d9363e;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: var(--r-sm);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* ============================================================
+   6. 徽章
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.8;
+  border-radius: var(--r-pill);
+  border: 1px solid transparent;
+}
+
+.badge-user {
+  color: var(--c-info);
+  background: rgba(24, 144, 255, 0.14);
+  border-color: rgba(24, 144, 255, 0.32);
+}
+
+.badge-admin {
+  color: #c9a7f5;
+  background: var(--c-admin-soft);
+  border-color: rgba(114, 46, 209, 0.42);
+}
+
+.badge-success {
+  color: var(--c-success);
+  background: var(--c-success-soft);
+  border-color: rgba(82, 196, 26, 0.32);
+}
+
+.badge-danger {
+  color: var(--c-danger);
+  background: var(--c-danger-soft);
+  border-color: rgba(255, 77, 79, 0.32);
+}
+
+/* ============================================================
+   7. 表单
+   ============================================================ */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-3);
+}
+
+.field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.input {
+  width: 100%;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  color: var(--fg);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-md);
+  outline: none;
+  transition: border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease),
+    background var(--t-base) var(--ease);
+}
+
+.input::placeholder {
+  color: var(--fg-dim);
+}
+
+.input:focus {
+  border-color: var(--c-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 3px var(--c-primary-soft);
+}
+
+.input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   8. 表格
+   ============================================================ */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--glass-border);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th {
+  padding: 12px 14px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--fg-muted);
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--glass-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 12px 14px;
+  color: var(--fg);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.table tbody tr {
+  transition: background var(--t-fast) var(--ease);
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ============================================================
+   9. 图标
+   ============================================================ */
+.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: currentColor;
+  line-height: 0;
+}
+
+.icon svg {
+  width: 1em;
+  height: 1em;
+  display: block;
+}
+
+/* ============================================================
+   10. 文本工具
+   ============================================================ */
+.muted {
+  color: var(--fg-muted);
+}
+.dim {
+  color: var(--fg-dim);
+}
+.mono {
+  font-family: var(--font-mono);
+}
+.text-danger {
+  color: var(--c-danger);
+}
+.text-success {
+  color: var(--c-success);
+}
+.text-center {
+  text-align: center;
+}
+.hidden {
+  display: none !important;
+}
+
+/* ============================================================
+   11. 动画
+   ============================================================ */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn var(--t-slow) var(--ease) both;
+}
+
+/* ============================================================
+   12. 响应式
+   ============================================================ */
+@media (max-width: 768px) {
+  .container {
+    padding: 0 var(--sp-3);
+  }
+  .glass-card {
+    padding: var(--sp-3);
+    border-radius: var(--r-md);
+  }
+  .grid-2 {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
