@@ -8,7 +8,9 @@ on:
 
 jobs:
   test:
-    name: 接口测试（Node 22.11.0）
+    # Node 版本锁 22.22.2：实测 22.11.0 会导致 better-sqlite3 的 native 模块
+    # 崩溃（本地复现退出码 0xC0000005 / STATUS_ACCESS_VIOLATION），故不可使用。
+    name: 接口测试（Node 22.22.2）
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -21,19 +23,27 @@ jobs:
       - name: 配置 Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version: '22.22.2'
           cache: npm
-          cache-dependency-path: local/package-lock.json
+          cache-dependency-path: ${{ github.workspace }}/local/package-lock.json
 
       # 必须用 npm ci：走 better-sqlite3 的预编译产物，避免源码编译
       - name: 安装依赖
         run: npm ci
 
+      # 冒烟：native 模块崩溃会在此步直接暴露（比等到测试再失败更好定位）
+      - name: 诊断：原生模块加载
+        run: |
+          node -v
+          node -e "const D=require('better-sqlite3'); const d=new D(':memory:'); console.log('sqlite ok', d.prepare('select 1 as a').get());"
+          node -e "require('express'); require('express-session'); console.log('deps ok')"
+
+      # spec reporter：hook 失败时会打印 server 子进程的 stdout/stderr
       - name: 本地接口测试
-        run: npm run test:local
+        run: node --test --test-reporter=spec ../test-local.mjs
 
       - name: Edge Functions 测试
-        run: npm run test:edge
+        run: node ../test-edge-functions.mjs
 
   format:
     name: 代码格式检查
@@ -46,7 +56,7 @@ jobs:
       - name: 配置 Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.11.0'
+          node-version: '22.22.2'
 
       # 只检查前端样式与脚本（public/vendor 与 local/ 已在 .prettierignore 中排除）
       - name: Prettier 检查

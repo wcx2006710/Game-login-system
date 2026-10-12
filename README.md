@@ -117,7 +117,7 @@ sequenceDiagram
 
 | 层级 | 技术 |
 | :--- | :--- |
-| 本地后端 | Node.js 22 + Express 5 + SQLite（better-sqlite3） |
+| 本地后端 | Node.js ≥ 22.22 + Express 5 + SQLite（better-sqlite3） |
 | 云后端 | 腾讯云 EdgeOne Pages Edge Functions + KV 存储 |
 | 会话 | express-session（本地）/ Cookie + KV（云端） |
 | 前端 | HTML5 + CSS3（自定义属性）+ 原生 JavaScript + Canvas |
@@ -128,6 +128,8 @@ sequenceDiagram
 | 工程化 | GitHub Actions CI、Prettier、ESLint、Docker |
 
 ## 🚀 快速开始
+
+> ⚠️ **Node 版本要求：≥ 22.22**。实测 **Node 22.11.0 会导致 `better-sqlite3` 的原生模块崩淿**（进程直接段错误退出），请勿使用 22.11.0。可用 `node -v` 确认。
 
 ```bash
 cd local
