@@ -4,137 +4,132 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <title>注册账号</title>
+  <meta name="description" content="注册新账号 - Game Login System">
+  <title>注册账号 | Game Login System</title>
+
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/styles/components.css">
+  <script src="/js/icons.js"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    #tsparticles {
+      position: fixed;
+      inset: 0;
+      z-index: var(--z-bg);
+      pointer-events: none;
+    }
+
     body {
-      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 40px 20px;
-      position: relative;
-      overflow-x: hidden;
     }
-    .floating {
-      position: fixed;
-      font-size: 32px;
-      opacity: 0.3;
-      pointer-events: none;
-      animation: float 7s ease-in-out infinite;
-    }
-    .floating:nth-child(1) { top: 12%; left: 8%; animation-delay: 0s; }
-    .floating:nth-child(2) { top: 70%; left: 14%; animation-delay: 1.6s; }
-    .floating:nth-child(3) { top: 18%; right: 10%; animation-delay: 3.2s; }
-    .floating:nth-child(4) { top: 74%; right: 13%; animation-delay: 2.4s; }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-22px) rotate(10deg); }
-    }
+
     .register-box {
       position: relative;
-      z-index: 10;
-      background: rgba(255,255,255,0.96);
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-      width: 380px;
+      z-index: var(--z-content);
+      width: 400px;
       max-width: 100%;
-      backdrop-filter: blur(10px);
+      animation: fadeIn 0.5s var(--ease) both;
     }
-    h2 { text-align: center; color: #333; margin-bottom: 8px; }
-    .subtitle { text-align: center; color: #999; font-size: 13px; margin-bottom: 26px; }
-    .form-group { margin-bottom: 16px; }
-    label { display: block; margin-bottom: 6px; color: #555; font-size: 14px; }
-    label .optional { color: #aaa; font-size: 12px; }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.3s;
+
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--c-primary-400);
     }
-    input:focus { border-color: #667eea; }
-    button {
-      width: 100%;
-      padding: 12px;
-      margin-top: 8px;
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
+    .brand .icon { font-size: 18px; }
+
+    h2 { text-align: center; font-size: 26px; margin-bottom: 6px; }
+    .subtitle { text-align: center; font-size: 13px; margin-bottom: 26px; color: var(--fg-dim); }
+
+    /* 输入框右侧操作按钮（显示/隐藏密码） */
+    .float-label .input { padding-right: 42px; }
+    .input-action {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
       font-size: 16px;
+      color: var(--fg-dim);
+      background: transparent;
+      border: none;
+      border-radius: var(--r-sm);
       cursor: pointer;
-      transition: background 0.3s;
+      transition: color var(--t-base) var(--ease), background var(--t-base) var(--ease);
     }
-    button:hover:not(:disabled) { background: #5568d3; }
-    button:disabled { background: #b9c2f0; cursor: not-allowed; }
-    .message {
-      display: none;
-      margin-top: 16px;
-      padding: 10px 12px;
-      border-radius: 6px;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .message.show { display: block; }
-    .message.error { background: #fff1f0; color: #cf1322; border: 1px solid #ffccc7; }
-    .message.success { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+    .input-action:hover { color: var(--fg); background: rgba(255, 255, 255, 0.08); }
+
     .rules {
       margin-top: 18px;
-      padding: 12px;
-      background: #f5f5f5;
-      border-radius: 6px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
       font-size: 12px;
-      color: #888;
+      color: var(--fg-dim);
       line-height: 1.9;
     }
-    .footer-link {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 13px;
-      color: #888;
-    }
-    .footer-link a { color: #667eea; text-decoration: none; }
-    .footer-link a:hover { text-decoration: underline; }
+
+    .footer-link { margin-top: 20px; text-align: center; font-size: 13px; color: var(--fg-dim); }
+    .footer-link a { display: inline-flex; align-items: center; gap: 5px; }
+
+    /* 兼容旧脚本的错误容器，默认隐藏，提示统一走 Toast */
+    .message { display: none; }
   </style>
 </head>
 <body>
-  <div class="floating">💣</div>
-  <div class="floating">🚩</div>
-  <div class="floating">💥</div>
-  <div class="floating">🎮</div>
+  <div id="tsparticles" aria-hidden="true"></div>
 
-  <div class="register-box">
+  <div class="glass-card register-box">
+    <div class="brand"><i class="icon" data-icon="user-plus"></i> Game Login</div>
     <h2>注册账号</h2>
     <p class="subtitle">创建账号后即可登录体验扫雷游戏</p>
 
     <form id="registerForm" novalidate>
-      <div class="form-group">
+      <div class="float-label">
+        <input class="input" type="text" id="username" name="username" autocomplete="username" placeholder=" ">
         <label for="username">用户名</label>
-        <input type="text" id="username" name="username" autocomplete="username"
-               placeholder="3-20 位字母、数字或下划线">
       </div>
-      <div class="form-group">
-        <label for="email">邮箱 <span class="optional">（选填）</span></label>
-        <input type="email" id="email" name="email" autocomplete="email"
-               placeholder="example@mail.com">
+      <div class="float-label">
+        <input class="input" type="email" id="email" name="email" autocomplete="email" placeholder=" ">
+        <label for="email">邮箱（选填）</label>
       </div>
-      <div class="form-group">
+      <div class="float-label">
+        <input class="input" type="password" id="password" name="password" autocomplete="new-password" placeholder=" ">
         <label for="password">密码</label>
-        <input type="password" id="password" name="password" autocomplete="new-password"
-               placeholder="至少 6 位">
+        <button type="button" class="input-action" id="togglePassword" aria-label="显示密码">
+          <i class="icon" data-icon="eye"></i>
+        </button>
       </div>
-      <div class="form-group">
+      <div class="strength" id="strength" data-score="0">
+        <div class="strength-track">
+          <span class="strength-seg"></span>
+          <span class="strength-seg"></span>
+          <span class="strength-seg"></span>
+          <span class="strength-seg"></span>
+        </div>
+        <div class="strength-text" id="strengthText">请输入密码</div>
+      </div>
+      <div class="float-label">
+        <input class="input" type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password" placeholder=" ">
         <label for="confirmPassword">确认密码</label>
-        <input type="password" id="confirmPassword" name="confirmPassword" autocomplete="new-password"
-               placeholder="再次输入密码">
       </div>
-      <button type="submit">注 册</button>
+      <button type="submit" class="btn btn-primary btn-block" id="submitButton">
+        <i class="icon" data-icon="user-plus"></i>注 册
+      </button>
     </form>
 
     <div class="message" id="message"></div>
@@ -146,82 +141,118 @@
     </div>
 
     <div class="footer-link">
-      已有账号？<a href="/login.html">返回登录</a>
+      已有账号？<a href="/login.html"><i class="icon" data-icon="log-in"></i>返回登录</a>
     </div>
   </div>
 
+  <script src="/js/ui.js"></script>
+  <script src="/vendor/tsparticles.slim.bundle.min.js"></script>
   <script>
     const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
     const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const MIN_PASSWORD_LENGTH = 6;
 
     const form = document.getElementById('registerForm');
-    const messageBox = document.getElementById('message');
-    const submitButton = form.querySelector('button[type="submit"]');
+    const submitButton = document.getElementById('submitButton');
+    const passwordInput = document.getElementById('password');
+    const usernameInput = document.getElementById('username');
+    const strength = document.getElementById('strength');
+    const strengthText = document.getElementById('strengthText');
 
-    function showMessage(text, type) {
-      messageBox.textContent = text;
-      messageBox.className = `message show ${type}`;
-    }
+    /* 密码强度实时评分 */
+    passwordInput.addEventListener('input', () => {
+      const result = UI.scorePassword(passwordInput.value, usernameInput.value.trim());
+      strength.setAttribute('data-score', String(result.score));
+      strengthText.textContent = result.label;
+    });
+    usernameInput.addEventListener('input', () => {
+      if (!passwordInput.value) return;
+      const result = UI.scorePassword(passwordInput.value, usernameInput.value.trim());
+      strength.setAttribute('data-score', String(result.score));
+      strengthText.textContent = result.label;
+    });
 
-    function hideMessage() {
-      messageBox.className = 'message';
-    }
+    /* 显示 / 隐藏密码 */
+    document.getElementById('togglePassword').addEventListener('click', () => {
+      const hidden = passwordInput.type === 'password';
+      passwordInput.type = hidden ? 'text' : 'password';
+      const btn = document.getElementById('togglePassword');
+      btn.innerHTML = '<i class="icon" data-icon="' + (hidden ? 'eye-off' : 'eye') + '"></i>';
+      Icons.render(btn);
+    });
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
-      hideMessage();
 
-      const username = document.getElementById('username').value.trim();
+      const username = usernameInput.value.trim();
       const email = document.getElementById('email').value.trim();
-      const password = document.getElementById('password').value;
+      const password = passwordInput.value;
       const confirmPassword = document.getElementById('confirmPassword').value;
 
       if (!USERNAME_PATTERN.test(username)) {
-        showMessage('用户名需为 3-20 位字母、数字或下划线', 'error');
+        UI.toast('用户名需为 3-20 位字母、数字或下划线', 'error');
         return;
       }
       if (password.length < MIN_PASSWORD_LENGTH) {
-        showMessage(`密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+        UI.toast('密码至少需要 ' + MIN_PASSWORD_LENGTH + ' 位', 'error');
         return;
       }
       if (password !== confirmPassword) {
-        showMessage('两次输入的密码不一致', 'error');
+        UI.toast('两次输入的密码不一致', 'error');
         return;
       }
       if (email && !EMAIL_PATTERN.test(email)) {
-        showMessage('邮箱格式不正确', 'error');
+        UI.toast('邮箱格式不正确', 'error');
         return;
       }
 
-      submitButton.disabled = true;
-      submitButton.textContent = '注册中...';
-
       try {
-        const response = await fetch('/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password, email })
+        await UI.withSpinner(submitButton, async () => {
+          const response = await fetch('/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password, email })
+          });
+          const data = await response.json().catch(() => ({}));
+
+          if (!response.ok || !data.success) {
+            UI.toast(data.error || ('注册失败（HTTP ' + response.status + '）'), 'error');
+            return;
+          }
+
+          UI.toast('账号 ' + username + ' 注册成功，正在跳转登录页', 'success');
+          form.reset();
+          strength.setAttribute('data-score', '0');
+          strengthText.textContent = '请输入密码';
+          setTimeout(() => {
+            window.location.href = data.redirect || '/login.html';
+          }, 1500);
         });
-        const data = await response.json().catch(() => ({}));
-
-        if (!response.ok || !data.success) {
-          showMessage(data.error || `注册失败（HTTP ${response.status}）`, 'error');
-          return;
-        }
-
-        showMessage(`账号 ${username} 注册成功，正在跳转到登录页...`, 'success');
-        form.reset();
-        setTimeout(() => {
-          window.location.href = data.redirect || '/login.html';
-        }, 1500);
       } catch (error) {
-        showMessage('无法连接服务器，请确认服务已启动', 'error');
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = '注 册';
+        UI.toast('无法连接服务器，请确认服务已启动', 'error');
       }
     });
+
+    /* 粒子背景（纯装饰，不拦截输入） */
+    if (typeof tsParticles !== 'undefined') {
+      tsParticles.load({
+        id: 'tsparticles',
+        options: {
+          fullScreen: { enable: false },
+          fpsLimit: 60,
+          detectRetina: true,
+          particles: {
+            number: { value: 38, density: { enable: true, width: 800 } },
+            color: { value: ['#667eea', '#764ba2'] },
+            links: { enable: true, color: '#667eea', opacity: 0.18, distance: 130, width: 1 },
+            move: { enable: true, speed: 0.6, direction: 'none', outModes: { default: 'out' } },
+            size: { value: { min: 1, max: 2.5 } },
+            opacity: { value: { min: 0.12, max: 0.4 } }
+          },
+          interactivity: { events: { onHover: { enable: false }, onClick: { enable: false } } }
+        }
+      });
+    }
   </script>
 </body>
 </html>

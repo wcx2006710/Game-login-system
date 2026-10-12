@@ -4,12 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <title>用户登录</title>
+  <title>用户登录 | Game Login System</title>
+
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/styles/components.css">
+  <script src="/js/icons.js"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #1a1a2e;
       min-height: 100vh;
       overflow: hidden;
       position: relative;
@@ -18,11 +20,11 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: 1;
+      z-index: var(--z-canvas);
     }
     .login-wrapper {
       position: relative;
-      z-index: 10;
+      z-index: var(--z-content);
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -31,72 +33,70 @@
     }
     .login-box {
       pointer-events: auto;
-      background: rgba(255,255,255,0.95);
-      padding: 40px;
-      border-radius: 12px;
-      box-shadow: 0 15px 35px rgba(0,0,0,0.3);
-      width: 360px;
-      backdrop-filter: blur(10px);
+      width: 380px;
+      max-width: calc(100vw - 40px);
+      animation: fadeIn 0.5s var(--ease) both;
     }
-    h2 { text-align: center; color: #333; margin-bottom: 30px; }
-    .form-group { margin-bottom: 20px; }
-    label { display: block; margin-bottom: 6px; color: #555; font-size: 14px; }
-    input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.3s;
+    .brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--c-primary-400);
     }
-    input:focus { border-color: #667eea; }
-    button {
-      width: 100%;
-      padding: 12px;
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-    button:hover { background: #5568d3; }
+    .brand .icon { font-size: 18px; }
+    h2 { text-align: center; font-size: 26px; margin-bottom: 26px; }
+
     .hint {
       margin-top: 20px;
-      padding: 12px;
-      background: #f5f5f5;
-      border-radius: 6px;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
       font-size: 12px;
-      color: #888;
-      line-height: 1.8;
+      color: var(--fg-dim);
+      line-height: 1.9;
     }
-    .switch-link {
-      margin-top: 16px;
-      text-align: center;
-      font-size: 13px;
-      color: #888;
+    .hint code {
+      color: var(--c-primary-400);
+      font-family: var(--font-mono);
+      font-size: 12px;
     }
-    .switch-link a { color: #667eea; text-decoration: none; }
-    .switch-link a:hover { text-decoration: underline; }
+
+    .switch-link { margin-top: 16px; text-align: center; font-size: 13px; color: var(--fg-dim); }
+    .switch-link a { display: inline-flex; align-items: center; gap: 5px; }
+
     .bomb-tip {
       position: fixed;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      color: rgba(255,255,255,0.5);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: rgba(11, 11, 26, 0.6);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-pill);
+      color: var(--fg-dim);
       font-size: 13px;
-      z-index: 10;
+      z-index: var(--z-content);
       pointer-events: none;
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
     }
+    .bomb-tip .icon { font-size: 14px; color: var(--c-warning); }
+
     /* 死亡覆盖层 */
     #deathOverlay {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.85);
-      z-index: 100;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: var(--z-overlay);
       display: none;
       flex-direction: column;
       align-items: center;
@@ -105,29 +105,18 @@
     }
     #deathOverlay.show { display: flex; }
     .death-text {
-      font-size: 72px;
-      color: #ff4d4f;
-      font-weight: bold;
-      text-shadow: 0 0 30px #ff4d4f;
+      font-size: 68px;
+      color: var(--c-danger);
+      font-weight: 800;
+      text-shadow: 0 0 30px var(--c-danger);
       margin-bottom: 20px;
       animation: shake 0.5s infinite;
     }
     .death-sub {
       font-size: 20px;
-      color: #fff;
+      color: var(--fg);
       margin-bottom: 40px;
     }
-    .retry-btn {
-      padding: 14px 40px;
-      background: #ff4d4f;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 18px;
-      cursor: pointer;
-      transition: transform 0.2s;
-    }
-    .retry-btn:hover { transform: scale(1.05); }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes shake {
       0%, 100% { transform: translateX(0); }
@@ -148,43 +137,46 @@
   <canvas id="gameCanvas"></canvas>
 
   <div class="login-wrapper">
-    <div class="login-box">
+    <div class="glass-card login-box">
+      <div class="brand"><i class="icon" data-icon="bomb"></i> Game Login</div>
       <h2>用户登录</h2>
       <form id="loginForm">
-        <div class="form-group">
-          <label>用户名</label>
-          <input type="text" id="username" name="username" required placeholder="请输入用户名">
+        <div class="float-label">
+          <input class="input" type="text" id="username" name="username" required placeholder=" ">
+          <label for="username">用户名</label>
         </div>
-        <div class="form-group">
-          <label>密码</label>
-          <input type="password" id="password" name="password" required placeholder="请输入密码">
+        <div class="float-label">
+          <input class="input" type="password" id="password" name="password" required placeholder=" ">
+          <label for="password">密码</label>
         </div>
-        <button type="submit">登 录</button>
+        <button type="submit" class="btn btn-primary btn-block"><i class="icon" data-icon="log-in"></i>登 录</button>
       </form>
       <div class="hint">
         测试账号：<br>
-        wcx / dashuaige<br>
-        admin / 123456（管理员）<br>
-        test / test123
+        <code>wcx / dashuaige</code><br>
+        <code>admin / 123456</code>（管理员）<br>
+        <code>test / test123</code>
       </div>
       <div class="switch-link">
-        还没有账号？<a href="/register.html">立即注册</a>
+        还没有账号？<a href="/register.html"><i class="icon" data-icon="user-plus"></i>立即注册</a>
       </div>
     </div>
   </div>
 
-  <div class="bomb-tip">💡 点击背景中的炸弹会爆炸，登录失败会触发全图爆炸！</div>
+  <div class="bomb-tip"><i class="icon" data-icon="zap"></i>点击背景中的炸弹会爆炸，登录失败会触发全图爆炸！</div>
 
   <div id="deathOverlay">
     <div class="death-text">💥 你被炸死了 💥</div>
     <div class="death-sub">用户名或密码错误，炸弹已被引爆</div>
-    <button class="retry-btn" onclick="respawn()">重新来过</button>
+    <button class="btn btn-danger" onclick="respawn()"><i class="icon" data-icon="loader-circle"></i>重新来过</button>
   </div>
 
+  <script src="/js/ui.js"></script>
   <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     let W, H;
+    let bgGradient;
     let bombs = [];
     let particles = [];
     let isDead = false;
@@ -192,6 +184,11 @@
     function resize() {
       W = canvas.width = window.innerWidth;
       H = canvas.height = window.innerHeight;
+      // 缓存渐变，避免每帧重建
+      bgGradient = ctx.createLinearGradient(0, 0, W, H);
+      bgGradient.addColorStop(0, '#1a1a2e');
+      bgGradient.addColorStop(0.5, '#16213e');
+      bgGradient.addColorStop(1, '#0f3460');
     }
     resize();
     window.addEventListener('resize', resize);
@@ -314,7 +311,7 @@
     function initBombs() {
       bombs = [];
       const count = 6;
-      const boxW = 360, boxH = 450;
+      const boxW = 380, boxH = 480;
       const boxX = W / 2 - boxW / 2, boxY = H / 2 - boxH / 2;
       for (let i = 0; i < count; i++) {
         let x, y, valid = false, attempts = 0;
@@ -334,7 +331,7 @@
 
     function loop() {
       try {
-        ctx.fillStyle = '#1a1a2e';
+        ctx.fillStyle = bgGradient;
         ctx.fillRect(0, 0, W, H);
         // 背景星星
         ctx.fillStyle = 'rgba(255,255,255,0.3)';
@@ -373,7 +370,7 @@
       document.querySelector('.death-sub').textContent =
         message || '用户名或密码错误，炸弹已被引爆';
       let delay = 0;
-      bombs.forEach((b, i) => {
+      bombs.forEach((b) => {
         setTimeout(() => {
           b.explode();
           if (navigator.vibrate) navigator.vibrate(100);
@@ -408,28 +405,27 @@
       const username = document.getElementById('username').value.trim();
       const password = document.getElementById('password').value;
 
-      submitButton.disabled = true;
-      submitButton.textContent = '登录中...';
-
       try {
-        const res = await fetch('/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, password })
+        await UI.withSpinner(submitButton, async () => {
+          const res = await fetch('/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+          const data = await res.json().catch(() => ({}));
+
+          if (data.success) {
+            UI.toast('登录成功，正在跳转', 'success', 1200);
+            setTimeout(() => {
+              window.location.href = data.redirect || '/success.html';
+            }, 500);
+            return;
+          }
+
+          triggerDeath(data.error || '用户名或密码错误，炸弹已被引爆');
         });
-        const data = await res.json().catch(() => ({}));
-
-        if (data.success) {
-          window.location.href = data.redirect || '/success.html';
-          return;
-        }
-
-        triggerDeath(data.error || '用户名或密码错误，炸弹已被引爆');
       } catch (error) {
         triggerDeath('无法连接服务器，请检查服务是否已启动');
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = '登 录';
       }
     });
 
