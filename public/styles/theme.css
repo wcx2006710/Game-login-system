@@ -21,6 +21,8 @@
 
   /* --- 强调色 / 角色色 --- */
   --c-accent: #764ba2;
+  /* 注意：--c-admin 对 --bg-0 的对比度仅 2.81:1，不可用作文字色；
+     管理员徽章文字请用浅紫 #c9a7f5，--c-admin 只做背景填充与描边 */
   --c-admin: #722ed1;
   --c-admin-soft: rgba(114, 46, 209, 0.18);
 
@@ -81,6 +83,42 @@
     BlinkMacSystemFont, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, 'Courier New', monospace;
 
+  /* --- 排版阶梯（Type Scale） --- */
+  --fs-xs: 12px;
+  --fs-sm: 13px;
+  --fs-base: 15px;
+  --fs-md: 16px;
+  --fs-lg: 18px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+  --fs-3xl: 32px;
+  --fs-4xl: 44px;
+  --lh-tight: 1.25;
+  --lh-base: 1.6;
+  --lh-loose: 1.8;
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --fw-bold: 700;
+  --fw-extrabold: 800;
+  --ls-tight: -0.5px;
+  --ls-normal: 0;
+  --ls-wide: 0.5px;
+
+  /* --- 栅格与断点（断点值仅作文档记录，媒体查询仍需写字面量） --- */
+  --container-max: 1100px;
+  --container-pad: 24px;
+  --gutter: 16px;
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+
+  /* --- 控件高度 --- */
+  --ctrl-h-sm: 30px;
+  --ctrl-h-md: 38px;
+  --ctrl-h-lg: 46px;
+
   /* --- z-index 层级 --- */
   --z-bg: -1;
   --z-canvas: 1;
@@ -89,11 +127,29 @@
   --z-toast: 1000;
   --z-overlay: 1100;
 
+  /* --- 描边与分隔 --- */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.2);
+
+  /* --- 交互状态 --- */
+  --state-hover: rgba(255, 255, 255, 0.05);
+  --state-active: rgba(255, 255, 255, 0.09);
+  --state-selected: rgba(102, 126, 234, 0.18);
+  --state-disabled-opacity: 0.55;
+  --focus-ring: 0 0 0 3px var(--c-primary-soft);
+  --focus-ring-strong: 0 0 0 3px var(--c-primary-glow);
+
   /* --- 动效 --- */
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --t-xs: 0.1s;
   --t-fast: 0.15s;
   --t-base: 0.25s;
   --t-slow: 0.4s;
+  --t-slower: 0.6s;
 }
 
 /* ============================================================

@@ -48,6 +48,7 @@
 | `/profile.html` | 个人中心：账号信息、改邮箱、改密码 |
 | `/admin.html` | 用户管理后台：统计卡片、Chart.js 图表、用户 CRUD |
 | `/minesweeper.html` | 扫雷游戏 |
+| `/design-system.html` | **设计规范系统**：设计令牌、组件、图标、无障碍规范可视化一览 |
 
 > 改造前的旧版界面已不在工作区，但仍完整保留在 Git 历史中，需要对比时可随时取回：
 > ```bash
@@ -178,6 +179,9 @@ docker run --rm --network host -v game-login-data:/app/data game-login-system
 
 ## 🎨 设计系统
 
+> 完整规范见 **[`docs/DESIGN-SYSTEM.md`](./docs/DESIGN-SYSTEM.md)**，
+> 可视化一览见 **[/design-system.html](http://127.0.0.1:3000/design-system.html)**（色值实时读取 `theme.css`，与实现保持一致）。
+
 界面统一为**科技感暗色玻璃拟态**，所有设计令牌集中在 [`public/styles/theme.css`](./public/styles/theme.css)：
 
 | 类别 | 令牌 | 说明 |
@@ -297,7 +301,10 @@ login-system/
 │   ├── index.html  login.html  register.html
 │   ├── success.html  profile.html  admin.html
 │   ├── minesweeper.html  favicon.svg
-├── docs/screenshots/             # 文档截图
+│   ├── design-system.html        # 设计规范可视化一览
+├── docs/
+│   ├── DESIGN-SYSTEM.md          # 设计规范文档
+│   └── screenshots/              # 文档截图
 ├── test-local.mjs                # 本地接口测试
 ├── test-edge-functions.mjs       # 云端函数测试
 ├── edgeone.json                  # EdgeOne Pages 配置
