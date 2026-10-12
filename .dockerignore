@@ -1,0 +1,9 @@
+node_modules/
+.git/
+.github/
+data/
+*.log
+docs/
+WORKBUDDY_HANDOFF.md
+PROJECT_CONTEXT.md
+edgeone_setup.png

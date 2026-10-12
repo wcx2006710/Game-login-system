@@ -143,10 +143,26 @@
   /* ---------------- 密码强度 ---------------- */
 
   var WEAK_LIST = [
-    '123456', '12345678', '123456789', '111111', '000000', 'password',
-    'abc123', 'a123456', 'qwerty', 'iloveyou', 'admin', 'root',
-    'test123', '123123', '654321', 'password123', 'letmein', 'welcome',
-    'monkey', 'dragon'
+    '123456',
+    '12345678',
+    '123456789',
+    '111111',
+    '000000',
+    'password',
+    'abc123',
+    'a123456',
+    'qwerty',
+    'iloveyou',
+    'admin',
+    'root',
+    'test123',
+    '123123',
+    '654321',
+    'password123',
+    'letmein',
+    'welcome',
+    'monkey',
+    'dragon'
   ];
 
   var LABELS = ['请输入密码', '弱', '中', '较强', '强'];
