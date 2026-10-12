@@ -4,74 +4,60 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <title>扫雷游戏</title>
+  <title>扫雷游戏 | Game Login System</title>
+
+  <link rel="stylesheet" href="/styles/theme.css">
+  <script src="/js/icons.js"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    /* 只套外壳：容器、标题、按钮改为暗色玻璃；棋盘配色保持原样以保证可读性 */
     body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
       align-items: center;
       padding: 30px 20px;
     }
+
     .header {
       width: 100%;
-      max-width: 500px;
+      max-width: 520px;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       margin-bottom: 20px;
     }
-    .back-btn {
-      padding: 8px 18px;
-      background: #1890ff;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-      text-decoration: none;
-    }
-    .back-btn:hover { background: #40a9ff; }
-    .game-container {
-      background: #fff;
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
+    #userLabel { color: var(--fg-muted); font-size: 14px; }
+
+    .game-container { width: 100%; max-width: 520px; }
+
     h1 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       text-align: center;
-      color: #333;
-      margin-bottom: 16px;
       font-size: 24px;
+      margin-bottom: 16px;
     }
+    h1 .icon { font-size: 22px; color: var(--c-danger); }
+
     .game-info {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      gap: 12px;
       margin-bottom: 16px;
-      padding: 10px 16px;
-      background: #fafafa;
-      border-radius: 8px;
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
     }
-    .info-item {
-      font-size: 16px;
-      font-weight: bold;
-      color: #333;
-    }
-    .info-item span { color: #cf1322; }
-    .reset-btn {
-      padding: 6px 16px;
-      background: #52c41a;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .reset-btn:hover { background: #73d13d; }
+    .info-item { font-size: 15px; font-weight: 700; color: var(--fg); }
+    .info-item span { color: var(--c-danger); }
+
+    /* ===== 以下棋盘部分保持原始配色，不套暗色 ===== */
     .board {
       display: grid;
       grid-template-columns: repeat(9, 36px);
@@ -93,14 +79,8 @@
       font-weight: bold;
       cursor: pointer;
     }
-    .cell.revealed {
-      background: #e0e0e0;
-      border: 1px solid #bbb;
-      cursor: default;
-    }
-    .cell.mine {
-      background: #ff4d4f;
-    }
+    .cell.revealed { background: #e0e0e0; border: 1px solid #bbb; cursor: default; }
+    .cell.mine { background: #ff4d4f; }
     .cell.flagged { color: #cf1322; }
     .cell[data-num="1"] { color: #1890ff; }
     .cell[data-num="2"] { color: #52c41a; }
@@ -110,34 +90,35 @@
     .cell[data-num="6"] { color: #13c2c2; }
     .cell[data-num="7"] { color: #000; }
     .cell[data-num="8"] { color: #666; }
+
     .message {
       text-align: center;
       margin-top: 16px;
       font-size: 18px;
-      font-weight: bold;
+      font-weight: 700;
       min-height: 24px;
     }
-    .message.win { color: #52c41a; }
-    .message.lose { color: #cf1322; }
-    .tip {
-      margin-top: 12px;
-      font-size: 12px;
-      color: #999;
-      text-align: center;
+    .message.win { color: var(--c-success); }
+    .message.lose { color: #ff7875; }
+    .tip { margin-top: 12px; font-size: 12px; text-align: center; color: var(--fg-dim); }
+
+    @media (max-width: 480px) {
+      .board { grid-template-columns: repeat(9, 32px); }
+      .cell { width: 32px; height: 32px; font-size: 15px; }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <a href="/success.html" class="back-btn">← 返回首页</a>
-    <span id="userLabel" style="color:#666;font-size:14px;"></span>
+    <a href="/success.html" class="btn btn-sm"><i class="icon" data-icon="house"></i>返回首页</a>
+    <span id="userLabel"></span>
   </div>
 
-  <div class="game-container">
-    <h1>💣 扫雷游戏</h1>
+  <div class="glass-card game-container">
+    <h1><i class="icon" data-icon="bomb"></i>扫雷游戏</h1>
     <div class="game-info">
       <div class="info-item">剩余雷数：<span id="mineCount">10</span></div>
-      <button class="reset-btn" onclick="initGame()">重新开始</button>
+      <button class="btn btn-sm" onclick="initGame()"><i class="icon" data-icon="loader-circle"></i>重新开始</button>
       <div class="info-item">用时：<span id="timer">0</span>s</div>
     </div>
     <div class="board" id="board"></div>
@@ -226,7 +207,7 @@
           }
           cell.tabIndex = 0;
           cell.setAttribute('role', 'button');
-          cell.setAttribute('aria-label', `第 ${r + 1} 行，第 ${c + 1} 列`);
+          cell.setAttribute('aria-label', '第 ' + (r + 1) + ' 行，第 ' + (c + 1) + ' 列');
           cell.addEventListener('click', () => handleClick(r, c));
           cell.addEventListener('contextmenu', (e) => { e.preventDefault(); handleRightClick(r, c); });
           cell.addEventListener('keydown', (e) => {
@@ -291,7 +272,7 @@
       if (unrevealed === MINES) {
         gameOver = true;
         clearInterval(timerInterval);
-        document.getElementById('message').textContent = `🎉 恭喜获胜！用时 ${timer} 秒`;
+        document.getElementById('message').textContent = '🎉 恭喜获胜！用时 ' + timer + ' 秒';
         document.getElementById('message').className = 'message win';
       }
     }

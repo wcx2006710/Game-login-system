@@ -4,80 +4,49 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <title>用户管理后台</title>
+  <title>用户管理后台 | Game Login System</title>
+
+  <link rel="stylesheet" href="/styles/theme.css">
+  <link rel="stylesheet" href="/styles/components.css">
+  <script src="/js/icons.js"></script>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-      background: #f0f2f5;
-      min-height: 100vh;
-      padding: 40px 20px;
-    }
-    .container { max-width: 1000px; margin: 0 auto; }
+    .container { max-width: 1040px; margin: 0 auto; padding: 40px 20px; }
 
     .header {
-      background: #fff;
-      padding: 24px 30px;
-      border-radius: 10px;
-      margin-bottom: 20px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 16px;
       flex-wrap: wrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
     }
-    .welcome { display: flex; align-items: center; gap: 12px; }
+    .welcome { display: flex; align-items: center; gap: 14px; }
     .avatar {
       width: 48px; height: 48px;
-      background: #722ed1;
+      background: linear-gradient(135deg, var(--c-admin), #9254de);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
-      color: #fff; font-size: 20px; font-weight: bold;
+      color: #fff; font-size: 20px; font-weight: 700;
       flex-shrink: 0;
+      box-shadow: 0 4px 14px rgba(114, 46, 209, 0.45);
     }
-    .welcome-text h1 { font-size: 20px; color: #333; }
-    .welcome-text p { font-size: 13px; color: #888; margin-top: 2px; }
-    .header-actions { display: flex; align-items: center; gap: 10px; }
-    .link-btn {
-      padding: 8px 18px;
-      background: #fff;
-      color: #333;
-      border: 1px solid #d9d9d9;
-      border-radius: 6px;
-      font-size: 14px;
-      text-decoration: none;
-      cursor: pointer;
-    }
-    .link-btn:hover { border-color: #722ed1; color: #722ed1; }
-    .logout-btn {
-      padding: 8px 20px;
-      background: #ff4d4f;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .logout-btn:hover { background: #ff7875; }
+    .welcome-text h1 { font-size: 20px; }
+    .welcome-text p { font-size: 13px; margin-top: 2px; }
 
-    .card {
-      background: #fff;
-      padding: 24px 30px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-    .card h2 { font-size: 18px; color: #333; margin-bottom: 16px; }
-    .card-head {
+    .card-title {
       display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-      gap: 12px;
-      margin-bottom: 16px;
+      align-items: center;
+      gap: 8px;
+      font-size: 17px;
+      margin-bottom: 18px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--glass-border);
     }
-    .card-head h2 { margin-bottom: 0; }
-    .count { font-size: 13px; color: #999; }
+    .card-title .icon { font-size: 18px; color: var(--c-primary-400); }
+    .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .card-head .card-title { margin-bottom: 0; border-bottom: none; padding-bottom: 0; }
+    .count { font-size: 13px; color: var(--fg-dim); }
 
     .user-form {
       display: grid;
@@ -85,141 +54,122 @@
       gap: 16px;
       align-items: end;
     }
-    .field label {
-      display: block;
-      margin-bottom: 6px;
-      color: #666;
-      font-size: 13px;
-    }
-    .field input, .field select {
-      width: 100%;
-      padding: 9px 12px;
-      border: 1px solid #d9d9d9;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      background: #fff;
-      transition: border-color 0.3s;
-    }
-    .field input:focus, .field select:focus { border-color: #722ed1; }
-    .field input:disabled { background: #f5f5f5; color: #999; cursor: not-allowed; }
+    .field label { display: block; margin-bottom: 6px; font-size: 13px; color: var(--fg-muted); }
+    .field select { width: 100%; }
     .form-actions { display: flex; gap: 10px; }
-    .form-actions button {
-      padding: 9px 22px;
-      background: #722ed1;
-      color: #fff;
-      border: none;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .form-actions button:hover:not(:disabled) { background: #9254de; }
-    .form-actions button:disabled { background: #c9a6ea; cursor: not-allowed; }
-    .form-actions button.ghost {
-      background: #fff;
-      color: #666;
-      border: 1px solid #d9d9d9;
-    }
-    .form-actions button.ghost:hover { border-color: #722ed1; color: #722ed1; }
 
-    .message {
-      display: none;
-      margin-top: 16px;
-      padding: 10px 14px;
-      border-radius: 6px;
-      font-size: 13px;
-      line-height: 1.6;
-    }
-    .message.show { display: block; }
-    .message.error { background: #fff1f0; color: #cf1322; border: 1px solid #ffccc7; }
-    .message.success { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
-
-    .table-wrap { overflow-x: auto; }
-    table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 720px; }
-    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #f0f0f0; }
-    th { background: #fafafa; color: #666; font-weight: 600; white-space: nowrap; }
-    tr:hover td { background: #f9f9f9; }
-    td.empty { text-align: center; color: #999; }
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      background: #e6f7ff;
-      color: #1890ff;
-      border-radius: 10px;
-      font-size: 12px;
-      white-space: nowrap;
-    }
-    .badge-admin { background: #f9f0ff; color: #722ed1; }
     .mini {
-      padding: 4px 12px;
+      padding: 5px 12px;
       margin-right: 6px;
-      background: #fff;
-      color: #1890ff;
-      border: 1px solid #91d5ff;
-      border-radius: 4px;
+      background: rgba(24, 144, 255, 0.12);
+      color: #6cb6ff;
+      border: 1px solid rgba(24, 144, 255, 0.35);
+      border-radius: var(--r-sm);
       font-size: 13px;
       cursor: pointer;
+      transition: all var(--t-base) var(--ease);
     }
-    .mini:hover:not(:disabled) { background: #e6f7ff; }
-    .mini.danger { color: #ff4d4f; border-color: #ffa39e; }
-    .mini.danger:hover:not(:disabled) { background: #fff1f0; }
-    .mini:disabled { color: #bfbfbf; border-color: #e8e8e8; cursor: not-allowed; }
+    .mini:hover:not(:disabled) { background: rgba(24, 144, 255, 0.22); }
+    .mini.danger { color: #ff9c9e; background: rgba(255, 77, 79, 0.12); border-color: rgba(255, 77, 79, 0.35); }
+    .mini.danger:hover:not(:disabled) { background: rgba(255, 77, 79, 0.22); }
+    .mini:disabled { color: var(--fg-dim); background: transparent; border-color: var(--glass-border); cursor: not-allowed; }
+
+    .message { display: none; }
+
+    @media (max-width: 768px) {
+      .container { padding: 24px 16px; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <div class="header">
+    <div class="glass-card header">
       <div class="welcome">
         <div class="avatar" id="userAvatar">A</div>
         <div class="welcome-text">
           <h1>用户管理后台</h1>
-          <p id="currentUser">加载中...</p>
+          <p class="muted" id="currentUser">加载中...</p>
         </div>
       </div>
       <div class="header-actions">
-        <a class="link-btn" href="/success.html">返回主页</a>
-        <button class="logout-btn" id="logoutBtn">退出登录</button>
+        <a class="btn btn-sm" href="/success.html"><i class="icon" data-icon="house"></i>返回主页</a>
+        <button class="btn btn-sm btn-danger" id="logoutBtn"><i class="icon" data-icon="log-out"></i>退出登录</button>
       </div>
     </div>
 
-    <div class="card">
-      <h2 id="formTitle">新增用户</h2>
+    <!-- 数据概览 -->
+    <div class="stat-grid" style="margin-bottom:20px;">
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="icon" data-icon="users"></i>账号总数</div>
+        <div class="stat-value" id="statTotal">-</div>
+        <div class="stat-hint">数据库中的全部账号</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="icon" data-icon="shield-check"></i>管理员</div>
+        <div class="stat-value" id="statAdmin">-</div>
+        <div class="stat-hint">拥有后台管理权限</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="icon" data-icon="trending-up"></i>最近 7 天新增</div>
+        <div class="stat-value" id="statRecent">-</div>
+        <div class="stat-hint">按注册时间统计</div>
+      </div>
+      <div class="glass-card stat-card">
+        <div class="stat-label"><i class="icon" data-icon="calendar"></i>最新注册</div>
+        <div class="stat-value" id="statLatest" style="font-size:20px;">-</div>
+        <div class="stat-hint">最后一位加入的用户</div>
+      </div>
+    </div>
+
+    <!-- 图表 -->
+    <div class="chart-grid" style="margin-bottom:20px;">
+      <div class="glass-card">
+        <h2 class="card-title"><i class="icon" data-icon="chart-pie"></i>角色分布</h2>
+        <div class="chart-box"><canvas id="roleChart"></canvas></div>
+      </div>
+      <div class="glass-card">
+        <h2 class="card-title"><i class="icon" data-icon="trending-up"></i>注册增长趋势</h2>
+        <div class="chart-box"><canvas id="growthChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="glass-card" style="margin-bottom:20px;">
+      <h2 class="card-title" id="formTitleWrap"><i class="icon" data-icon="user-cog"></i><span id="formTitle">新增用户</span></h2>
       <form id="userForm" class="user-form" novalidate>
         <div class="field">
           <label for="username">用户名</label>
-          <input type="text" id="username" autocomplete="off" placeholder="3-20 位字母数字下划线">
+          <input class="input" type="text" id="username" autocomplete="off" placeholder="3-20 位字母数字下划线">
         </div>
         <div class="field">
           <label for="password">密码</label>
-          <input type="password" id="password" autocomplete="new-password" placeholder="至少 6 位">
+          <input class="input" type="password" id="password" autocomplete="new-password" placeholder="至少 6 位">
         </div>
         <div class="field">
           <label for="email">邮箱</label>
-          <input type="email" id="email" autocomplete="off" placeholder="选填">
+          <input class="input" type="email" id="email" autocomplete="off" placeholder="选填">
         </div>
         <div class="field">
           <label for="role">角色</label>
-          <select id="role">
+          <select class="input" id="role">
             <option value="user">普通用户</option>
             <option value="admin">管理员</option>
           </select>
         </div>
         <div class="form-actions">
-          <button type="submit" id="submitBtn">新增用户</button>
-          <button type="button" id="cancelBtn" class="ghost" hidden>取消编辑</button>
+          <button type="submit" class="btn btn-primary" id="submitBtn"><i class="icon" data-icon="user-plus"></i>新增用户</button>
+          <button type="button" class="btn" id="cancelBtn" hidden>取消编辑</button>
         </div>
       </form>
       <div class="message" id="formMessage"></div>
     </div>
 
-    <div class="card">
+    <div class="glass-card">
       <div class="card-head">
-        <h2>用户列表</h2>
+        <h2 class="card-title"><i class="icon" data-icon="users"></i>用户列表</h2>
         <span class="count" id="userCount"></span>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="table" style="min-width:720px;">
           <thead>
             <tr>
               <th>ID</th>
@@ -230,14 +180,14 @@
               <th>操作</th>
             </tr>
           </thead>
-          <tbody id="userTable">
-            <tr><td colspan="6" class="empty">加载中...</td></tr>
-          </tbody>
+          <tbody id="userTable"></tbody>
         </table>
       </div>
     </div>
   </div>
 
+  <script src="/js/ui.js"></script>
+  <script src="/vendor/chart.umd.min.js"></script>
   <script>
     const USERNAME_PATTERN = /^[A-Za-z0-9_]{3,20}$/;
     const MIN_PASSWORD_LENGTH = 6;
@@ -255,6 +205,8 @@
     let currentUserId = null;
     let editingUserId = null;
     let users = [];
+    let roleChart = null;
+    let growthChart = null;
 
     function redirectToLogin() { window.location.href = '/login.html'; }
     function redirectToHome() { window.location.href = '/success.html'; }
@@ -267,7 +219,7 @@
 
     function showFormMessage(text, type) {
       messageBox.textContent = text;
-      messageBox.className = `message show ${type}`;
+      messageBox.className = 'message show ' + type;
     }
 
     function clearFormMessage() {
@@ -279,7 +231,7 @@
       const row = document.createElement('tr');
       const cell = document.createElement('td');
       cell.colSpan = 6;
-      cell.className = 'empty';
+      cell.className = 'text-center dim';
       cell.textContent = text;
       row.appendChild(cell);
       tableBody.appendChild(row);
@@ -295,9 +247,10 @@
       form.reset();
       editingUserId = null;
       usernameInput.disabled = false;
-      passwordInput.placeholder = `至少 ${MIN_PASSWORD_LENGTH} 位`;
+      passwordInput.placeholder = '至少 ' + MIN_PASSWORD_LENGTH + ' 位';
       document.getElementById('formTitle').textContent = '新增用户';
-      submitButton.textContent = '新增用户';
+      submitButton.innerHTML = '<i class="icon" data-icon="user-plus"></i>新增用户';
+      Icons.render(submitButton);
       cancelButton.hidden = true;
       clearFormMessage();
     }
@@ -312,16 +265,115 @@
       emailInput.value = user.email || '';
       roleSelect.value = user.role === 'admin' ? 'admin' : 'user';
 
-      document.getElementById('formTitle').textContent = `编辑用户：${user.username}`;
-      submitButton.textContent = '保存修改';
+      document.getElementById('formTitle').textContent = '编辑用户：' + user.username;
+      submitButton.innerHTML = '<i class="icon" data-icon="save"></i>保存修改';
+      Icons.render(submitButton);
       cancelButton.hidden = false;
       clearFormMessage();
       form.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
+    /* ---------------- 统计与图表 ---------------- */
+
+    function renderStats() {
+      const admins = users.filter((u) => u.role === 'admin').length;
+
+      // 最近 7 天新增（created_at 为 UTC "YYYY-MM-DD HH:MM:SS"）
+      const today = new Date();
+      const sevenDaysAgo = new Date(today.getTime() - 7 * 24 * 3600 * 1000);
+      const pad = (n) => String(n).padStart(2, '0');
+      const isoOf = (d) => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+      const since = isoOf(sevenDaysAgo);
+      const recent = users.filter((u) => UI.dayOf(u.created_at) >= since && UI.dayOf(u.created_at) !== '未知').length;
+
+      const latest = users.reduce((acc, u) => {
+        const d = UI.dayOf(u.created_at);
+        if (d === '未知') return acc;
+        return !acc || d > acc ? d : acc;
+      }, '');
+
+      document.getElementById('statTotal').textContent = users.length;
+      document.getElementById('statAdmin').textContent = admins;
+      document.getElementById('statRecent').textContent = recent;
+      document.getElementById('statLatest').textContent = latest || '—';
+    }
+
+    function renderCharts() {
+      if (typeof Chart === 'undefined') return;
+
+      Chart.defaults.color = '#e8eaf2';
+      Chart.defaults.borderColor = 'rgba(255,255,255,0.12)';
+      Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+
+      // 角色分布
+      const admins = users.filter((u) => u.role === 'admin').length;
+      const normals = users.length - admins;
+      const roleCtx = document.getElementById('roleChart').getContext('2d');
+      if (roleChart) roleChart.destroy();
+      roleChart = new Chart(roleCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['管理员', '普通用户'],
+          datasets: [{
+            data: [admins, normals],
+            backgroundColor: ['rgba(114,46,209,0.85)', 'rgba(24,144,255,0.7)'],
+            borderColor: 'rgba(255,255,255,0.14)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '62%',
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, padding: 14 } }
+          }
+        }
+      });
+
+      // 注册增长趋势（按天累计）
+      const counts = {};
+      users.forEach((u) => {
+        const d = UI.dayOf(u.created_at);
+        counts[d] = (counts[d] || 0) + 1;
+      });
+      const days = Object.keys(counts).sort();
+      let acc = 0;
+      const cumulative = days.map((d) => (acc += counts[d]));
+
+      const growthCtx = document.getElementById('growthChart').getContext('2d');
+      if (growthChart) growthChart.destroy();
+      growthChart = new Chart(growthCtx, {
+        type: 'line',
+        data: {
+          labels: days,
+          datasets: [{
+            label: '累计注册用户',
+            data: cumulative,
+            fill: true,
+            backgroundColor: 'rgba(102,126,234,0.22)',
+            borderColor: '#667eea',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#667eea',
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 6 } },
+            y: { beginAtZero: true, ticks: { precision: 0 } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
     function renderUsers() {
       tableBody.replaceChildren();
-      document.getElementById('userCount').textContent = `共 ${users.length} 个账号`;
+      document.getElementById('userCount').textContent = '共 ' + users.length + ' 个账号';
 
       if (users.length === 0) {
         showTableMessage('暂无用户');
@@ -337,12 +389,12 @@
 
         const roleCell = document.createElement('td');
         const badge = document.createElement('span');
-        badge.className = user.role === 'admin' ? 'badge badge-admin' : 'badge';
+        badge.className = user.role === 'admin' ? 'badge badge-admin' : 'badge badge-user';
         badge.textContent = user.role === 'admin' ? '管理员' : '普通用户';
         roleCell.appendChild(badge);
         row.appendChild(roleCell);
 
-        appendTextCell(row, user.created_at || '-');
+        appendTextCell(row, UI.formatDate(user.created_at));
 
         const actionCell = document.createElement('td');
 
@@ -367,6 +419,8 @@
     }
 
     async function loadUsers() {
+      UI.renderSkeleton(tableBody, 4, 6);
+
       const { response, data } = await requestJson('/api/users');
 
       if (response.status === 401) { redirectToLogin(); return; }
@@ -377,23 +431,24 @@
 
       users = data;
       renderUsers();
+      renderStats();
+      renderCharts();
     }
 
     async function removeUser(user) {
-      if (!window.confirm(`确定删除用户「${user.username}」？该操作不可撤销。`)) return;
+      if (!window.confirm('确定删除用户「' + user.username + '」？该操作不可撤销。')) return;
 
-      const { response, data } = await requestJson(`/api/users/${user.id}`, { method: 'DELETE' });
+      const { response, data } = await requestJson('/api/users/' + user.id, { method: 'DELETE' });
 
       if (response.status === 401) { redirectToLogin(); return; }
       if (response.status === 403) { redirectToHome(); return; }
       if (!response.ok) {
-        window.alert(data.error || `删除失败（HTTP ${response.status}）`);
+        UI.toast(data.error || ('删除失败（HTTP ' + response.status + '）'), 'error');
         return;
       }
 
-      if (editingUserId === user.id) {
-        resetForm();
-      }
+      UI.toast('已删除用户「' + user.username + '」', 'success');
+      if (editingUserId === user.id) resetForm();
       await loadUsers();
     }
 
@@ -412,51 +467,51 @@
       let payload = { username, password, email, role };
 
       if (isEditing) {
-        url = `/api/users/${editingUserId}`;
+        url = '/api/users/' + editingUserId;
         method = 'PUT';
         payload = { email, role };
         if (password) {
           if (password.length < MIN_PASSWORD_LENGTH) {
-            showFormMessage(`密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+            UI.toast('密码至少需要 ' + MIN_PASSWORD_LENGTH + ' 位', 'error');
             return;
           }
           payload.password = password;
         }
       } else {
         if (!USERNAME_PATTERN.test(username)) {
-          showFormMessage('用户名需为 3-20 位字母、数字或下划线', 'error');
+          UI.toast('用户名需为 3-20 位字母、数字或下划线', 'error');
           return;
         }
         if (password.length < MIN_PASSWORD_LENGTH) {
-          showFormMessage(`密码至少需要 ${MIN_PASSWORD_LENGTH} 位`, 'error');
+          UI.toast('密码至少需要 ' + MIN_PASSWORD_LENGTH + ' 位', 'error');
           return;
         }
       }
 
-      submitButton.disabled = true;
-
       try {
-        const { response, data } = await requestJson(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+        await UI.withSpinner(submitButton, async () => {
+          const { response, data } = await requestJson(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (response.status === 401) { redirectToLogin(); return; }
+          if (response.status === 403) { redirectToHome(); return; }
+          if (!response.ok) {
+            UI.toast(data.error || ('操作失败（HTTP ' + response.status + '）'), 'error');
+            return;
+          }
+
+          const successText = isEditing
+            ? '用户「' + username + '」已更新'
+            : '已新增用户「' + data.username + '」';
+          resetForm();
+          UI.toast(successText, 'success');
+          await loadUsers();
         });
-
-        if (response.status === 401) { redirectToLogin(); return; }
-        if (response.status === 403) { redirectToHome(); return; }
-        if (!response.ok) {
-          showFormMessage(data.error || `操作失败（HTTP ${response.status}）`, 'error');
-          return;
-        }
-
-        const successText = isEditing ? `用户「${username}」已更新` : `已新增用户「${data.username}」`;
-        resetForm();
-        showFormMessage(successText, 'success');
-        await loadUsers();
       } catch (error) {
-        showFormMessage('无法连接服务器，请确认服务已启动', 'error');
-      } finally {
-        submitButton.disabled = false;
+        UI.toast('无法连接服务器，请确认服务已启动', 'error');
       }
     });
 
@@ -478,7 +533,7 @@
 
       currentUserId = data.user.id;
       document.getElementById('currentUser').textContent =
-        `当前登录：${data.user.username}（管理员）`;
+        '当前登录：' + data.user.username + '（管理员）';
       document.getElementById('userAvatar').textContent =
         data.user.username.charAt(0).toUpperCase();
 
