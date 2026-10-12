@@ -49,19 +49,11 @@
 | `/admin.html` | 用户管理后台：统计卡片、Chart.js 图表、用户 CRUD |
 | `/minesweeper.html` | 扫雷游戏 |
 
-**旧版存档**（`/legacy/`，改造前原始界面，用于设计对比）
-
-| 路径 | 对应新版 |
-| :--- | :--- |
-| `/legacy/index.html` | `/index.html` |
-| `/legacy/login.html` | `/login.html` |
-| `/legacy/register.html` | `/register.html` |
-| `/legacy/success.html` | `/success.html` |
-| `/legacy/profile.html` | `/profile.html` |
-| `/legacy/admin.html` | `/admin.html` |
-| `/legacy/minesweeper.html` | `/minesweeper.html` |
-
-详见 [`public/legacy/README.md`](./public/legacy/README.md)。
+> 改造前的旧版界面已不在工作区，但仍完整保留在 Git 历史中，需要对比时可随时取回：
+> ```bash
+> git show 7518a81:public/login.html > /tmp/old-login.html   # 任一旧版页面
+> git log --oneline 7518a81 -1                                # 改造前的最后一个提交
+> ```
 
 ## 🏗️ 架构
 
@@ -302,7 +294,6 @@ login-system/
 │   │   ├── icons.js              # Lucide 图标子集（内联 SVG）
 │   │   └── ui.js                 # 交互工具：Toast / Spinner / 骨架屏 / 评分
 │   ├── vendor/                   # 离线第三方库（含来源与 License 说明）
-│   ├── legacy/                   # 旧版界面存档
 │   ├── index.html  login.html  register.html
 │   ├── success.html  profile.html  admin.html
 │   ├── minesweeper.html  favicon.svg
