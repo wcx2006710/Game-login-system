@@ -24,9 +24,9 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
     }
-    #bgCanvas { z-index: var(--z-canvas); }
-    /* 特效层：透明，每帧做拖尾擦除与加色合成 */
-    #gameCanvas { z-index: calc(var(--z-canvas) + 1); }
+    #bgCanvas { z-index: 1; }
+    /* 特效层：透明，每帧做拖尾擦除与加色合成（用字面量，避免 calc 兼容问题） */
+    #gameCanvas { z-index: 2; }
 
     /* 白光过曝层：爆炸瞬间提亮全屏，pointer-events:none 保证不挡交互 */
     #flash {
@@ -701,38 +701,98 @@
       }
     }
 
+    // 单帧异常绝不能中断 rAF 链：一旦断链，表现就是"整个画面完全不动"
+    let frameErrorLogged = false;
+
     function frame(now) {
       const dt = Math.min((now - last) / 16.667, 3);
       last = now;
       T += dt;
-      step(dt);
+      try {
+        step(dt);
+      } catch (err) {
+        if (!frameErrorLogged) {
+          frameErrorLogged = true;
+          console.error('[login] 动画帧异常，已跳过该帧：', err);
+        }
+      }
       requestAnimationFrame(frame);
+    }
+
+    /* 降级模式（prefers-reduced-motion）下的手动推进入口：
+       不跑 rAF，但点击/登录失败仍要给出可见反馈，否则用户会以为"完全没反应" */
+    function advance(steps) {
+      for (let i = 0; i < steps; i += 1) {
+        [particles, waves, arcs].forEach(function (list) {
+          for (let j = list.length - 1; j >= 0; j -= 1) {
+            list[j].update(1);
+            if (list[j].life <= 0) list.splice(j, 1);
+          }
+        });
+      }
+    }
+
+    function renderOnce() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      bombs.forEach(function (b) { b.draw(); });
+      ctx.globalCompositeOperation = 'lighter';
+      waves.concat(particles, arcs).forEach(function (o) {
+        if (o.life > 0) o.draw();
+      });
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+
+    function flashBlink() {
+      flashEl.style.opacity = '0.45';
+      setTimeout(function () { flashEl.style.opacity = '0'; }, 220);
     }
 
     /* ---------- 初始化 ---------- */
     function initBombs() {
       bombs = [];
-      const count = 6;
-      const boxW = 380;
-      const boxH = 480;
-      const boxX = W / 2 - boxW / 2;
-      const boxY = H / 2 - boxH / 2;
-      for (let i = 0; i < count; i += 1) {
-        let x = 0;
-        let y = 0;
-        let valid = false;
-        let attempts = 0;
-        while (!valid && attempts < 100) {
-          x = Math.random() * (W - 100) + 50;
-          y = Math.random() * (H - 100) + 50;
-          // 避开登录框（留 40px 余量，小屏也能生成满 6 颗）
-          if (x > boxX - 40 && x < boxX + boxW + 40 && y > boxY - 40 && y < boxY + boxH + 40) {
-            attempts += 1;
-            continue;
-          }
-          valid = true;
+
+      // 按登录卡片的真实尺寸算避让区（原来写死 380×480，小屏或内容变高时会挡住炸弹）
+      let avoid = null;
+      const box = document.querySelector('.login-box');
+      if (box) {
+        const r = box.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          avoid = { left: r.left, right: r.right, top: r.top, bottom: r.bottom };
         }
-        if (valid) bombs.push(new Bomb(x, y));
+      }
+      // rect 异常（宽高为 0、或大得吃掉大半个视口）时退回估算值，否则会一颗都放不下
+      const fallback = { left: W / 2 - 190, right: W / 2 + 190, top: H / 2 - 250, bottom: H / 2 + 250 };
+      const avoidArea = avoid ? (avoid.right - avoid.left) * (avoid.bottom - avoid.top) : 0;
+      if (!avoid || avoidArea > W * H * 0.55) avoid = fallback;
+
+      // 窄屏少放几颗，保证每颗都有可点空间
+      const count = W < 900 ? 4 : 6;
+
+      for (let i = 0; i < count; i += 1) {
+        let placed = null;
+        // 两轮尝试：先留 40px 余量；放不下就缩到 12px，尽量凑满数量
+        [40, 12].forEach(function (pad) {
+          if (placed) return;
+          let attempts = 0;
+          while (!placed && attempts < 120) {
+            const x = Math.random() * (W - 100) + 50;
+            const y = Math.random() * (H - 100) + 50;
+            const inside =
+              x > avoid.left - pad &&
+              x < avoid.right + pad &&
+              y > avoid.top - pad &&
+              y < avoid.bottom + pad;
+            if (inside) {
+              attempts += 1;
+              continue;
+            }
+            placed = new Bomb(x, y);
+          }
+        });
+        if (placed) bombs.push(placed);
       }
     }
 
@@ -743,8 +803,7 @@
 
     if (REDUCED) {
       // 尊重 prefers-reduced-motion：只静态绘制，不启动 rAF
-      ctx.clearRect(0, 0, W, H);
-      bombs.forEach(function (b) { b.draw(); });
+      renderOnce();
     } else {
       requestAnimationFrame(frame);
     }
@@ -755,9 +814,18 @@
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
+      let hit = false;
       bombs.slice().forEach(function (b) {
-        if (b.contains(x, y)) b.explode();
+        if (!b.contains(x, y)) return;
+        b.explode();
+        hit = true;
       });
+      // 降级模式下没有 rAF，手动推进一帧让爆炸可见
+      if (hit && REDUCED) {
+        advance(14);
+        renderOnce();
+        flashBlink();
+      }
     });
 
     /* ---------- 登录失败：有空间连锁的全图爆炸 ---------- */
@@ -767,6 +835,18 @@
 
       document.querySelector('.death-sub').textContent =
         message || '用户名或密码错误，炸弹已被引爆';
+
+      // 降级模式：不播放连锁动画，但画出爆炸结果并直接弹层
+      if (REDUCED) {
+        createExplosion(W / 2, H / 2, 1.4);
+        createExplosion(W / 3, H / 3, 1.1);
+        createExplosion((W * 2) / 3, (H * 2) / 3, 1.1);
+        advance(16);
+        renderOnce();
+        flashBlink();
+        document.getElementById('deathOverlay').classList.add('show');
+        return;
+      }
 
       flashAdd(0.5);
 
@@ -814,10 +894,7 @@
       initBombs();
       document.getElementById('username').value = '';
       document.getElementById('password').value = '';
-      if (REDUCED) {
-        ctx.clearRect(0, 0, W, H);
-        bombs.forEach(function (b) { b.draw(); });
-      }
+      if (REDUCED) renderOnce();
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
