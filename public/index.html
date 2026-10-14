@@ -273,37 +273,37 @@
     <h2 class="section-title">功能特性</h2>
     <p class="section-subtitle">七大核心模块，前后端完整闭环</p>
     <div class="features-grid">
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-blue"><i class="icon" data-icon="lock"></i></div>
         <h3>用户登录认证</h3>
         <p>基于 Express + Session 的登录认证系统，密码校验、会话管理、登出销毁全流程覆盖。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-red"><i class="icon" data-icon="zap"></i></div>
         <h3>炸弹互动背景</h3>
         <p>Canvas 粒子系统打造的动态背景，点击炸弹触发爆炸效果，登录失败连环引爆全屏。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-green"><i class="icon" data-icon="gamepad-2"></i></div>
         <h3>内置扫雷游戏</h3>
         <p>登录成功即可游玩经典扫雷，9×9 棋盘、右键插旗、计时挑战、胜负判定一应俱全。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-purple"><i class="icon" data-icon="users"></i></div>
         <h3>用户数据表格</h3>
         <p>登录后展示数据库中的用户列表，包含 ID、用户名、邮箱、注册时间等字段。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-pink"><i class="icon" data-icon="user-plus"></i></div>
         <h3>注册与用户管理</h3>
         <p>开放注册新账号，管理员可在后台新增、编辑、删除用户并分配角色；登录后还可在个人中心修改自己的邮箱与密码。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-cyan"><i class="icon" data-icon="database"></i></div>
         <h3>SQLite 数据库</h3>
         <p>使用 better-sqlite3 同步操作数据库，无需额外安装数据库服务，开箱即用。</p>
       </div>
-      <div class="glass-card glass-card--lift feature-card">
+      <div class="glass-card glass-card--lift feature-card reveal">
         <div class="feature-icon icon-orange"><i class="icon" data-icon="bomb"></i></div>
         <h3>失败死亡界面</h3>
         <p>输错密码触发炸弹连环爆炸、屏幕震动，弹出「你被炸死了」死亡界面，趣味十足。</p>
@@ -360,6 +360,7 @@
     <p>© 2026 Game Login System. All Rights Reserved.</p>
   </footer>
 
+  <script src="/js/ui.js"></script>
   <script src="/vendor/tsparticles.slim.bundle.min.js"></script>
   <script>
     /* 首页粒子背景：纯装饰层，pointer-events:none，绝不拦截导航点击 */
@@ -385,6 +386,12 @@
         }
       });
     })();
+  </script>
+  <script>
+    /* 质感增强：卡片高光跟随指针、按钮磁性微移、卡片错峰入场 */
+    UI.pointerGlow('.glass-card');
+    UI.magneticButtons('.nav-btn, .hero-buttons .btn, .tech-tag');
+    UI.revealOnScroll('.reveal');
   </script>
 </body>
 </html>

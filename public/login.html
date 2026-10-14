@@ -16,12 +16,29 @@
       overflow: hidden;
       position: relative;
     }
+
+    /* 背景层：只在 resize 时重绘一次（渐变 + 星点 + 网格） */
+    #bgCanvas,
     #gameCanvas {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      z-index: var(--z-canvas);
     }
+    #bgCanvas { z-index: var(--z-canvas); }
+    /* 特效层：透明，每帧做拖尾擦除与加色合成 */
+    #gameCanvas { z-index: calc(var(--z-canvas) + 1); }
+
+    /* 白光过曝层：爆炸瞬间提亮全屏，pointer-events:none 保证不挡交互 */
+    #flash {
+      position: fixed;
+      inset: 0;
+      z-index: 1050;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 50%, #eaffff 0%, #9fe8ff 45%, rgba(159, 232, 255, 0) 78%);
+      mix-blend-mode: screen;
+    }
+
     .login-wrapper {
       position: relative;
       z-index: var(--z-content);
@@ -30,6 +47,7 @@
       align-items: center;
       justify-content: center;
       pointer-events: none;
+      will-change: transform;
     }
     .login-box {
       pointer-events: auto;
@@ -48,7 +66,14 @@
       color: var(--c-primary-400);
     }
     .brand .icon { font-size: 18px; }
-    h2 { text-align: center; font-size: 26px; margin-bottom: 26px; }
+    h2 {
+      text-align: center;
+      font-size: var(--fs-2xl);
+      font-weight: var(--fw-bold);
+      letter-spacing: var(--ls-tight);
+      line-height: var(--lh-tight);
+      margin-bottom: 26px;
+    }
 
     .hint {
       margin-top: 20px;
@@ -85,17 +110,22 @@
       font-size: 13px;
       z-index: var(--z-content);
       pointer-events: none;
+      will-change: transform;
       -webkit-backdrop-filter: blur(8px);
       backdrop-filter: blur(8px);
     }
     .bomb-tip .icon { font-size: 14px; color: var(--c-warning); }
 
-    /* 死亡覆盖层 */
+    /* 死亡覆盖层：中心留一点余烬可见，而非整屏压黑 */
     #deathOverlay {
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: radial-gradient(
+        ellipse at 50% 45%,
+        rgba(20, 8, 28, 0.55),
+        rgba(6, 4, 10, 0.86)
+      );
       z-index: var(--z-overlay);
       display: none;
       flex-direction: column;
@@ -105,12 +135,16 @@
     }
     #deathOverlay.show { display: flex; }
     .death-text {
-      font-size: 68px;
-      color: var(--c-danger);
+      font-size: clamp(40px, 9vw, 68px);
+      color: #ff5c7a;
       font-weight: 800;
-      text-shadow: 0 0 30px var(--c-danger);
+      letter-spacing: var(--ls-tight);
+      text-shadow:
+        0 0 30px rgba(255, 92, 122, 0.9),
+        3px 0 0 rgba(0, 240, 255, 0.55),
+        -3px 0 0 rgba(255, 77, 216, 0.55);
       margin-bottom: 20px;
-      animation: shake 0.5s infinite;
+      animation: shake 0.6s var(--ease-out) 2;
     }
     .death-sub {
       font-size: 20px;
@@ -123,20 +157,14 @@
       25% { transform: translateX(-5px); }
       75% { transform: translateX(5px); }
     }
-    body.death { animation: screenShake 0.3s; }
-    @keyframes screenShake {
-      0%, 100% { transform: translate(0, 0); }
-      20% { transform: translate(-10px, 5px); }
-      40% { transform: translate(10px, -5px); }
-      60% { transform: translate(-5px, 10px); }
-      80% { transform: translate(5px, -10px); }
-    }
   </style>
 </head>
 <body>
+  <canvas id="bgCanvas"></canvas>
   <canvas id="gameCanvas"></canvas>
+  <div id="flash" aria-hidden="true"></div>
 
-  <div class="login-wrapper">
+  <div class="login-wrapper" id="loginWrapper">
     <div class="glass-card login-box">
       <div class="brand"><i class="icon" data-icon="bomb"></i> Game Login</div>
       <h2>用户登录</h2>
@@ -163,7 +191,7 @@
     </div>
   </div>
 
-  <div class="bomb-tip"><i class="icon" data-icon="zap"></i>点击背景中的炸弹会爆炸，登录失败会触发全图爆炸！</div>
+  <div class="bomb-tip" id="bombTip"><i class="icon" data-icon="zap"></i>点击背景中的炸弹会爆炸，登录失败会触发全图爆炸！</div>
 
   <div id="deathOverlay">
     <div class="death-text">💥 你被炸死了 💥</div>
@@ -173,154 +201,516 @@
 
   <script src="/js/ui.js"></script>
   <script>
+    /* ==========================================================
+       赛博能量爆 —— Canvas 2D 粒子系统
+       要点：双层画布 / DPR / deltaTime / 拖尾 / 预烘 sprite 加色合成
+             / 电弧 / 多环冲击波 / 色差重影 / 白光过曝 / 随机衰减震动
+       ========================================================== */
+
+    const bgCanvas = document.getElementById('bgCanvas');
     const canvas = document.getElementById('gameCanvas');
+    const bgx = bgCanvas.getContext('2d');
     const ctx = canvas.getContext('2d');
-    let W, H;
-    let bgGradient;
+    const flashEl = document.getElementById('flash');
+    const wrapEl = document.getElementById('loginWrapper');
+    const tipEl = document.getElementById('bombTip');
+
+    const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    // 低端设备降级：关拖尾、砍 spark 层与电弧、粒子减半
+    const LOW = REDUCED || (navigator.hardwareConcurrency || 8) <= 4;
+    const MAX_PARTICLES = LOW ? 400 : 900;
+
+    let W = 0;
+    let H = 0;
+    let dpr = 1;
+    let T = 0;
+    let last = performance.now();
+
     let bombs = [];
     let particles = [];
+    let waves = [];
+    let arcs = [];
+
+    let flash = 0;
+    let amp = 0;
+    let aberration = 0;
     let isDead = false;
 
+    /* ---------- 尺寸与 DPR ---------- */
     function resize() {
-      W = canvas.width = window.innerWidth;
-      H = canvas.height = window.innerHeight;
-      // 缓存渐变，避免每帧重建
-      bgGradient = ctx.createLinearGradient(0, 0, W, H);
-      bgGradient.addColorStop(0, '#1a1a2e');
-      bgGradient.addColorStop(0.5, '#16213e');
-      bgGradient.addColorStop(1, '#0f3460');
-    }
-    resize();
-    window.addEventListener('resize', resize);
+      W = window.innerWidth;
+      H = window.innerHeight;
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    // 炸弹类
-    class Bomb {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.radius = 22;
-        this.exploded = false;
-        this.pulse = Math.random() * Math.PI * 2;
-        this.floatOffset = Math.random() * Math.PI * 2;
-        this.baseY = y;
+      [[bgCanvas, bgx], [canvas, ctx]].forEach(function (pair) {
+        pair[0].width = Math.floor(W * dpr);
+        pair[0].height = Math.floor(H * dpr);
+        pair[0].style.width = W + 'px';
+        pair[0].style.height = H + 'px';
+        pair[1].setTransform(dpr, 0, 0, dpr, 0, 0);
+      });
+
+      ghost.width = Math.floor(W * dpr);
+      ghost.height = Math.floor(H * dpr);
+      ghostCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      tint.width = Math.floor(W * dpr);
+      tint.height = Math.floor(H * dpr);
+      tintCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      drawBackdrop();
+    }
+
+    /* ---------- 静态背景（只在 resize 时画一次） ---------- */
+    function drawBackdrop() {
+      const g = bgx.createLinearGradient(0, 0, W, H);
+      g.addColorStop(0, '#1a1a2e');
+      g.addColorStop(0.5, '#16213e');
+      g.addColorStop(1, '#0f3460');
+      bgx.fillStyle = g;
+      bgx.fillRect(0, 0, W, H);
+
+      // 科技感网格
+      bgx.strokeStyle = 'rgba(102,126,234,0.055)';
+      bgx.lineWidth = 1;
+      for (let x = 0; x < W; x += 64) {
+        bgx.beginPath();
+        bgx.moveTo(x, 0);
+        bgx.lineTo(x, H);
+        bgx.stroke();
       }
-      update() {
-        this.pulse += 0.05;
-        this.floatOffset += 0.02;
-        this.y = this.baseY + Math.sin(this.floatOffset) * 8;
+      for (let y = 0; y < H; y += 64) {
+        bgx.beginPath();
+        bgx.moveTo(0, y);
+        bgx.lineTo(W, y);
+        bgx.stroke();
       }
-      draw() {
-        if (this.exploded) return;
-        const scale = 1 + Math.sin(this.pulse) * 0.08;
-        ctx.save();
-        ctx.translate(this.x, this.y);
-        ctx.scale(scale, scale);
-        // 引线
-        ctx.strokeStyle = '#8B4513';
-        ctx.lineWidth = 3;
+
+      // 星点（固定伪随机，避免每帧抖动）
+      for (let i = 0; i < 80; i += 1) {
+        const sx = (i * 137.5) % W;
+        const sy = (i * 97.3) % H;
+        const a = 0.12 + (((i * 37) % 100) / 260);
+        bgx.fillStyle = 'rgba(198,224,255,' + a.toFixed(3) + ')';
+        bgx.fillRect(sx, sy, 1.4, 1.4);
+      }
+    }
+
+    /* ---------- 预烘辉光 sprite（全程零 shadowBlur） ---------- */
+    const STEPS = 24;
+    const SPRITES = [];
+
+    // 色温演化：青(185°) → 蓝紫(250°) → 品红(310°)，亮度递减做余烬
+    function emberColor(t, alpha) {
+      const hue = 185 + 125 * Math.pow(t, 0.8);
+      const light = 74 - 42 * Math.pow(t, 1.3);
+      const h = hue.toFixed(0);
+      const l = light.toFixed(0);
+      return alpha === undefined ? 'hsl(' + h + ', 100%, ' + l + '%)' : 'hsla(' + h + ', 100%, ' + l + '%, ' + alpha + ')';
+    }
+
+    // 预计算色阶，避免每帧对每个粒子拼接字符串
+    const EMBER = [];
+    for (let i = 0; i < STEPS; i += 1) EMBER.push(emberColor(i / (STEPS - 1)));
+
+    function buildSprites() {
+      for (let i = 0; i < STEPS; i += 1) {
+        const c = document.createElement('canvas');
+        c.width = 32;
+        c.height = 32;
+        const g = c.getContext('2d');
+        const t = i / (STEPS - 1);
+        const grd = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+        grd.addColorStop(0, '#ffffff');
+        grd.addColorStop(0.22, emberColor(t));
+        grd.addColorStop(0.55, emberColor(Math.min(1, t + 0.25), 0.45));
+        grd.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = grd;
+        g.fillRect(0, 0, 32, 32);
+        SPRITES.push(c);
+      }
+    }
+
+    /* ---------- 离屏画布：色差重影用 ---------- */
+    const ghost = document.createElement('canvas');
+    const ghostCtx = ghost.getContext('2d');
+    const tint = document.createElement('canvas');
+    const tintCtx = tint.getContext('2d');
+
+    function tintedCopy(color) {
+      tintCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      tintCtx.clearRect(0, 0, W, H);
+      tintCtx.globalCompositeOperation = 'source-over';
+      tintCtx.drawImage(ghost, 0, 0, W, H);
+      tintCtx.globalCompositeOperation = 'source-in';
+      tintCtx.fillStyle = color;
+      tintCtx.fillRect(0, 0, W, H);
+      tintCtx.globalCompositeOperation = 'source-over';
+      return tint;
+    }
+
+    /* ---------- 粒子 ---------- */
+    const LAYERS = {
+      core: { n: 18, sp: [1, 5], sz: [2.5, 5.5], drag: 0.9, grav: 0.02 },
+      shell: { n: 54, sp: [6, 16], sz: [1.2, 3], drag: 0.965, grav: 0.1 },
+      spark: { n: 24, sp: [12, 26], sz: [0.6, 1.6], drag: 0.93, grav: 0.16 }
+    };
+
+    function Particle(x, y, layer) {
+      const ang = Math.random() * Math.PI * 2;
+      const sp = layer.sp[0] + Math.random() * (layer.sp[1] - layer.sp[0]);
+      this.x = x;
+      this.y = y;
+      this.vx = Math.cos(ang) * sp;
+      this.vy = Math.sin(ang) * sp;
+      this.size = layer.sz[0] + Math.random() * (layer.sz[1] - layer.sz[0]);
+      this.drag = layer.drag;
+      this.grav = layer.grav;
+      this.life = 1;
+      this.decay = 0.008 + Math.random() * 0.016;
+      this.flick = Math.random() < 0.35;
+      this.flickHz = 0.02 + Math.random() * 0.05;
+      this.seed = Math.random() * 100;
+    }
+
+    Particle.prototype.update = function (dt) {
+      // 湍流：让粒子不是完美球形散开
+      this.vx += Math.sin(this.y * 0.02 + T * 0.005 + this.seed) * 0.06 * dt;
+      this.vy += this.grav * dt;
+      this.vx *= Math.pow(this.drag, dt);
+      this.vy *= Math.pow(0.99, dt);
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.life -= this.decay * dt;
+    };
+
+    Particle.prototype.draw = function () {
+      const idx = Math.max(0, Math.min(STEPS - 1, ((1 - this.life) * (STEPS - 1)) | 0));
+      let alpha = this.life;
+      if (this.flick) alpha *= 0.62 + 0.38 * Math.sin(T * this.flickHz + this.seed);
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+      const speed = Math.hypot(this.vx, this.vy);
+      const r = this.size * (0.4 + this.life);
+
+      // 高速粒子拉成流星线，慢速画辉光点
+      if (speed > 6 && !LOW) {
+        ctx.strokeStyle = EMBER[idx];
+        ctx.lineWidth = r * 1.1;
+        ctx.lineCap = 'round';
         ctx.beginPath();
-        ctx.moveTo(5, -this.radius + 2);
-        ctx.quadraticCurveTo(15, -this.radius - 10, 20, -this.radius - 5);
+        ctx.moveTo(this.x, this.y);
+        ctx.lineTo(this.x - this.vx * 1.6, this.y - this.vy * 1.6);
         ctx.stroke();
-        // 火花
-        ctx.fillStyle = '#ff6600';
-        ctx.beginPath();
-        ctx.arc(20, -this.radius - 5, 3 + Math.sin(this.pulse * 3) * 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = '#ffff00';
-        ctx.beginPath();
-        ctx.arc(20, -this.radius - 5, 1.5, 0, Math.PI * 2);
-        ctx.fill();
-        // 炸弹主体
-        const gradient = ctx.createRadialGradient(-5, -5, 2, 0, 0, this.radius);
-        gradient.addColorStop(0, '#555');
-        gradient.addColorStop(1, '#1a1a1a');
-        ctx.fillStyle = gradient;
-        ctx.beginPath();
-        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        // 高光
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.beginPath();
-        ctx.arc(-7, -7, 6, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+      } else {
+        ctx.drawImage(SPRITES[idx], this.x - r, this.y - r, r * 2, r * 2);
       }
-      contains(px, py) {
-        const dx = px - this.x, dy = py - this.y;
-        return dx * dx + dy * dy < (this.radius + 10) * (this.radius + 10);
+    };
+
+    /* ---------- 电弧 ---------- */
+    function Arc(x, y, ang) {
+      const segs = 6 + ((Math.random() * 4) | 0);
+      const len = 40 + Math.random() * 90;
+      this.pts = [];
+      let cx = x;
+      let cy = y;
+      let a = ang;
+      for (let i = 0; i < segs; i += 1) {
+        this.pts.push([cx, cy]);
+        a += (Math.random() - 0.5) * 0.9;
+        cx += Math.cos(a) * (len / segs);
+        cy += Math.sin(a) * (len / segs);
       }
-      explode() {
-        if (this.exploded) return;
-        this.exploded = true;
-        createExplosion(this.x, this.y);
-      }
+      this.life = 1;
+      this.decay = 0.05 + Math.random() * 0.05;
     }
 
-    // 粒子类
-    class Particle {
-      constructor(x, y, color) {
-        this.x = x; this.y = y;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * 8 + 2;
-        this.vx = Math.cos(angle) * speed;
-        this.vy = Math.sin(angle) * speed;
-        this.life = 1;
-        this.decay = Math.random() * 0.02 + 0.015;
-        this.size = Math.random() * 5 + 2;
-        this.color = color;
-      }
-      update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        this.vy += 0.15;
-        this.vx *= 0.98;
-        this.life -= this.decay;
-      }
-      draw() {
-        ctx.globalAlpha = this.life;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size * this.life, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
+    Arc.prototype.update = function (dt) {
+      this.life -= this.decay * dt;
+    };
+
+    Arc.prototype.draw = function () {
+      ctx.globalAlpha = Math.max(0, this.life);
+      ctx.strokeStyle = '#cafcff';
+      ctx.lineWidth = 0.4 + this.life * 1.4;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      ctx.moveTo(this.pts[0][0], this.pts[0][1]);
+      for (let i = 1; i < this.pts.length; i += 1) ctx.lineTo(this.pts[i][0], this.pts[i][1]);
+      ctx.stroke();
+    };
+
+    /* ---------- 冲击波 ---------- */
+    function Wave(x, y, max, w) {
+      this.x = x;
+      this.y = y;
+      this.r = 2;
+      this.max = max;
+      this.w = w;
+      this.life = 1;
+      this.decay = 0.028;
     }
 
-    function createExplosion(x, y) {
-      const colors = ['#ff4d4f', '#ff7a45', '#ffa940', '#ffec3d', '#fff'];
-      for (let i = 0; i < 60; i++) {
-        particles.push(new Particle(x, y, colors[Math.floor(Math.random() * colors.length)]));
+    Wave.prototype.update = function (dt) {
+      this.r += (this.max - this.r) * 0.12 * dt;
+      this.life -= this.decay * dt;
+    };
+
+    Wave.prototype.draw = function () {
+      const inner = Math.max(0, this.r * 0.72);
+      const g = ctx.createRadialGradient(this.x, this.y, inner, this.x, this.y, this.r);
+      g.addColorStop(0, 'rgba(0,240,255,0)');
+      g.addColorStop(0.78, 'rgba(0,240,255,' + (0.55 * this.life).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(139,92,246,0)');
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = g;
+      ctx.lineWidth = Math.max(0.3, this.w * this.life);
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.stroke();
+    };
+
+    /* ---------- 炸弹：赛博能量球 ---------- */
+    function Bomb(x, y) {
+      this.x = x;
+      this.y = y;
+      this.radius = 22;
+      this.exploded = false;
+      this.pulse = Math.random() * Math.PI * 2;
+      this.floatOffset = Math.random() * Math.PI * 2;
+      this.baseY = y;
+      this.fuse = 0.35 + Math.random() * 0.65;
+    }
+
+    Bomb.prototype.update = function (dt) {
+      this.pulse += 0.05 * dt;
+      this.floatOffset += 0.02 * dt;
+      this.y = this.baseY + Math.sin(this.floatOffset) * 8;
+      this.fuse -= 0.0016 * dt;
+      if (this.fuse < 0) this.fuse = 1;
+    };
+
+    Bomb.prototype.draw = function () {
+      if (this.exploded) return;
+      const r = this.radius * (1 + Math.sin(this.pulse) * 0.06);
+
+      ctx.save();
+      ctx.translate(this.x, this.y);
+
+      // 向外扩散的能量脉冲环
+      const phase = ((T * 0.6 + this.pulse * 3) % 26) / 26;
+      const pr = r + phase * 26;
+      ctx.globalCompositeOperation = 'lighter';
+      const ring = ctx.createRadialGradient(0, 0, pr * 0.62, 0, 0, pr);
+      ring.addColorStop(0, 'rgba(0,240,255,0)');
+      ring.addColorStop(0.82, 'rgba(0,240,255,' + (0.3 * (1 - phase)).toFixed(3) + ')');
+      ring.addColorStop(1, 'rgba(139,92,246,0)');
+      ctx.fillStyle = ring;
+      ctx.beginPath();
+      ctx.arc(0, 0, pr, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      // 球体本体
+      const g = ctx.createRadialGradient(-r * 0.25, -r * 0.32, r * 0.1, 0, 0, r);
+      g.addColorStop(0, '#2f3559');
+      g.addColorStop(0.6, '#15172c');
+      g.addColorStop(1, '#080a14');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 金属边缘光：上半亮白、下半冷蓝（环境反射）
+      ctx.lineWidth = 1.6;
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 1, Math.PI * 1.05, Math.PI * 1.95);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(120,180,255,0.32)';
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 1, Math.PI * 0.05, Math.PI * 0.95);
+      ctx.stroke();
+
+      // 核心光点（呼吸）
+      const core = 3 + Math.sin(this.pulse * 2) * 1.2;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(SPRITES[2], -core * 2, -core * 2, core * 4, core * 4);
+
+      // 引信：按 fuse 截短，火花沿端点跑
+      const fx = 2;
+      const fy = -r + 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = 'rgba(130,150,190,0.55)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.quadraticCurveTo(fx + 10 * this.fuse, fy - 9, fx + 14 * this.fuse, fy - 4);
+      ctx.stroke();
+
+      const sx = fx + 14 * this.fuse;
+      const sy = fy - 4;
+      const s = 3 + Math.sin(this.pulse * 4) * 1.2;
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.drawImage(SPRITES[0], sx - s, sy - s, s * 2, s * 2);
+
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    };
+
+    Bomb.prototype.contains = function (px, py) {
+      const dx = px - this.x;
+      const dy = py - this.y;
+      return dx * dx + dy * dy < (this.radius + 10) * (this.radius + 10);
+    };
+
+    Bomb.prototype.explode = function () {
+      if (this.exploded) return;
+      this.exploded = true;
+      createExplosion(this.x, this.y, 1);
+    };
+
+    /* ---------- 爆炸 ---------- */
+    function pushParticle(p) {
+      particles.push(p);
+      if (particles.length > MAX_PARTICLES) particles.splice(0, particles.length - MAX_PARTICLES);
+    }
+
+    function createExplosion(x, y, scale) {
+      scale = scale || 1;
+
+      ['core', 'shell', 'spark'].forEach(function (key) {
+        if (LOW && key === 'spark') return;
+        const layer = LAYERS[key];
+        const n = Math.round(layer.n * scale * (LOW ? 0.5 : 1));
+        for (let i = 0; i < n; i += 1) pushParticle(new Particle(x, y, layer));
+      });
+
+      // 多环冲击波
+      [[90, 6], [155, 3], [230, 1.5]].forEach(function (pair) {
+        waves.push(new Wave(x, y, pair[0] * scale, pair[1]));
+      });
+
+      // 电弧（赛博风格的关键）
+      if (!LOW) {
+        const count = 2 + ((Math.random() * 3) | 0);
+        for (let i = 0; i < count; i += 1) {
+          arcs.push(new Arc(x, y, Math.random() * Math.PI * 2));
+        }
       }
-      // 冲击波
-      particles.push({
-        x, y, radius: 5, maxRadius: 80, life: 1,
-        update() { this.radius += 4; this.life -= 0.05; },
-        draw() {
-          ctx.globalAlpha = this.life * 0.5;
-          ctx.strokeStyle = '#fff';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.globalAlpha = 1;
+
+      aberration = Math.min(1, aberration + 0.85 * scale);
+    }
+
+    /* ---------- 过曝与震动 ---------- */
+    function flashAdd(v) {
+      flash = Math.min(1, flash + v);
+    }
+
+    function shake(a) {
+      if (LOW) return;
+      amp = Math.min(26, amp + a);
+    }
+
+    /* ---------- 主循环 ---------- */
+    function step(dt) {
+      // 拖尾擦除（透明层用 destination-out，不碰背景画布）
+      if (LOW) {
+        ctx.clearRect(0, 0, W, H);
+      } else {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.fillStyle = 'rgba(0,0,0,0.22)';
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      // 炸弹：本体 source-over，发光 lighter（draw 内自行切换）
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      bombs = bombs.filter(function (b) { return !b.exploded; });
+      bombs.forEach(function (b) { b.update(dt); b.draw(); });
+
+      // 特效：全部加色合成
+      ctx.globalCompositeOperation = 'lighter';
+      [waves, particles, arcs].forEach(function (list) {
+        for (let i = list.length - 1; i >= 0; i -= 1) {
+          const item = list[i];
+          item.update(dt);
+          if (item.life <= 0) { list.splice(i, 1); continue; }
+          item.draw();
         }
       });
+      ctx.globalAlpha = 1;
+
+      // 色差重影：把粒子层拷到离屏，染色后左右错位叠加
+      if (aberration > 0.08 && !LOW) {
+        ghostCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ghostCtx.clearRect(0, 0, W, H);
+        ghostCtx.drawImage(canvas, 0, 0, W, H);
+
+        const off = 3 + aberration * 5;
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.5 * aberration;
+        ctx.drawImage(tintedCopy('#00f0ff'), -off, 0, W, H);
+        ctx.globalAlpha = 0.38 * aberration;
+        ctx.drawImage(tintedCopy('#ff4dd8'), off, 0, W, H);
+        ctx.globalAlpha = 1;
+        aberration *= Math.pow(0.9, dt);
+      } else {
+        aberration = 0;
+      }
+      ctx.globalCompositeOperation = 'source-over';
+
+      // 过曝
+      if (flash > 0.002) {
+        flashEl.style.opacity = (flash * 0.85).toFixed(3);
+        flash *= Math.pow(0.88, dt);
+      } else if (flash !== 0) {
+        flash = 0;
+        flashEl.style.opacity = '0';
+      }
+
+      // 随机衰减震动（只动 wrapper 与 tip，不动 body —— body 有 transform 会让 backdrop-filter 每帧重算）
+      if (amp > 0.3) {
+        const dx = (Math.random() * 2 - 1) * amp;
+        const dy = (Math.random() * 2 - 1) * amp * 0.6;
+        wrapEl.style.transform = 'translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
+        tipEl.style.transform = 'translateX(-50%) translate3d(' + dx.toFixed(2) + 'px,' + dy.toFixed(2) + 'px,0)';
+        amp *= Math.pow(0.86, dt);
+      } else if (amp !== 0) {
+        amp = 0;
+        wrapEl.style.transform = '';
+        tipEl.style.transform = '';
+      }
     }
 
+    function frame(now) {
+      const dt = Math.min((now - last) / 16.667, 3);
+      last = now;
+      T += dt;
+      step(dt);
+      requestAnimationFrame(frame);
+    }
+
+    /* ---------- 初始化 ---------- */
     function initBombs() {
       bombs = [];
       const count = 6;
-      const boxW = 380, boxH = 480;
-      const boxX = W / 2 - boxW / 2, boxY = H / 2 - boxH / 2;
-      for (let i = 0; i < count; i++) {
-        let x, y, valid = false, attempts = 0;
+      const boxW = 380;
+      const boxH = 480;
+      const boxX = W / 2 - boxW / 2;
+      const boxY = H / 2 - boxH / 2;
+      for (let i = 0; i < count; i += 1) {
+        let x = 0;
+        let y = 0;
+        let valid = false;
+        let attempts = 0;
         while (!valid && attempts < 50) {
           x = Math.random() * (W - 100) + 50;
           y = Math.random() * (H - 100) + 50;
           // 避开登录框
           if (x > boxX - 60 && x < boxX + boxW + 60 && y > boxY - 60 && y < boxY + boxH + 60) {
-            attempts++;
+            attempts += 1;
             continue;
           }
           valid = true;
@@ -329,73 +719,88 @@
       }
     }
 
-    function loop() {
-      try {
-        ctx.fillStyle = bgGradient;
-        ctx.fillRect(0, 0, W, H);
-        // 背景星星
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        for (let i = 0; i < 50; i++) {
-          const sx = (i * 137.5) % W;
-          const sy = (i * 97.3) % H;
-          ctx.fillRect(sx, sy, 1.5, 1.5);
-        }
-        bombs = bombs.filter(b => !b.exploded);
-        bombs.forEach(b => { b.update(); b.draw(); });
-        for (let i = particles.length - 1; i >= 0; i--) {
-          const p = particles[i];
-          p.update();
-          if (p.life <= 0) { particles.splice(i, 1); continue; }
-          p.draw();
-        }
-      } catch (e) { console.error('动画帧错误:', e); }
-      requestAnimationFrame(loop);
+    buildSprites();
+    resize();
+    window.addEventListener('resize', resize);
+    initBombs();
+
+    if (REDUCED) {
+      // 尊重 prefers-reduced-motion：只静态绘制，不启动 rAF
+      ctx.clearRect(0, 0, W, H);
+      bombs.forEach(function (b) { b.draw(); });
+    } else {
+      requestAnimationFrame(frame);
     }
 
-    canvas.addEventListener('click', (e) => {
+    /* ---------- 点击引爆 ---------- */
+    canvas.addEventListener('click', function (e) {
       if (isDead) return;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      bombs.forEach(b => {
+      bombs.slice().forEach(function (b) {
         if (b.contains(x, y)) b.explode();
       });
     });
 
-    // 登录失败触发全图爆炸
+    /* ---------- 登录失败：有空间连锁的全图爆炸 ---------- */
     function triggerDeath(message) {
       if (isDead) return;
       isDead = true;
-      document.body.classList.add('death');
+
       document.querySelector('.death-sub').textContent =
         message || '用户名或密码错误，炸弹已被引爆';
+
+      flashAdd(0.5);
+
+      // 按 x 从左到右引爆，制造连锁感
+      const queue = bombs
+        .slice()
+        .filter(function (b) { return !b.exploded; })
+        .sort(function (a, b) { return a.x - b.x; });
+
       let delay = 0;
-      bombs.forEach((b) => {
-        setTimeout(() => {
+      queue.forEach(function (b) {
+        delay += 160 + Math.random() * 90;
+        setTimeout(function () {
           b.explode();
-          if (navigator.vibrate) navigator.vibrate(100);
+          flashAdd(0.35);
+          shake(14);
         }, delay);
-        delay += 200;
       });
-      setTimeout(() => {
-        // 中心大爆炸
-        createExplosion(W / 2, H / 2);
-        createExplosion(W / 3, H / 3);
-        createExplosion(W * 2 / 3, H * 2 / 3);
-      }, delay + 200);
-      setTimeout(() => {
+
+      setTimeout(function () {
+        createExplosion(W / 2, H / 2, 1.4);
+        createExplosion(W / 3, H / 3, 1.1);
+        createExplosion((W * 2) / 3, (H * 2) / 3, 1.1);
+        flashAdd(1);
+        shake(26);
+      }, delay + 250);
+
+      setTimeout(function () {
         document.getElementById('deathOverlay').classList.add('show');
-      }, delay + 800);
+      }, delay + 1200);
     }
 
     function respawn() {
       isDead = false;
-      document.body.classList.remove('death');
       document.getElementById('deathOverlay').classList.remove('show');
-      initBombs();
       particles = [];
+      waves = [];
+      arcs = [];
+      flash = 0;
+      aberration = 0;
+      amp = 0;
+      flashEl.style.opacity = '0';
+      wrapEl.style.transform = '';
+      tipEl.style.transform = '';
+      initBombs();
       document.getElementById('username').value = '';
       document.getElementById('password').value = '';
+      if (REDUCED) {
+        ctx.clearRect(0, 0, W, H);
+        bombs.forEach(function (b) { b.draw(); });
+      }
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -428,9 +833,6 @@
         triggerDeath('无法连接服务器，请检查服务是否已启动');
       }
     });
-
-    initBombs();
-    loop();
   </script>
 </body>
 </html>

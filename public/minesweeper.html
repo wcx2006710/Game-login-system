@@ -57,39 +57,44 @@
     .info-item { font-size: 15px; font-weight: 700; color: var(--fg); }
     .info-item span { color: var(--c-danger); }
 
-    /* ===== 以下棋盘部分保持原始配色，不套暗色 ===== */
+    /* ===== 棋盘：已套暗色，但保留经典数字色相（蓝1绿2红3 的通用约定不动，只提亮） ===== */
     .board {
       display: grid;
       grid-template-columns: repeat(9, 36px);
       gap: 2px;
-      background: #bbb;
+      background: #23263a;
       padding: 4px;
-      border-radius: 4px;
+      border-radius: 6px;
       user-select: none;
+      box-shadow: var(--sh-1);
     }
     .cell {
       width: 36px;
       height: 36px;
-      background: #c0c0c0;
-      border: 2px outset #ddd;
+      background: #2e3250;
+      /* 用 inset 高光保留经典 Windows 的立体感，而非 outset 灰白 */
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 16px;
       font-weight: bold;
       cursor: pointer;
+      transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
     }
-    .cell.revealed { background: #e0e0e0; border: 1px solid #bbb; cursor: default; }
+    .cell:hover { background: #39406a; transform: translateY(-1px); }
+    .cell.revealed { background: #1b1e30; box-shadow: none; cursor: default; }
     .cell.mine { background: #ff4d4f; }
-    .cell.flagged { color: #cf1322; }
-    .cell[data-num="1"] { color: #1890ff; }
-    .cell[data-num="2"] { color: #52c41a; }
-    .cell[data-num="3"] { color: #cf1322; }
-    .cell[data-num="4"] { color: #722ed1; }
-    .cell[data-num="5"] { color: #d46b08; }
-    .cell[data-num="6"] { color: #13c2c2; }
-    .cell[data-num="7"] { color: #000; }
-    .cell[data-num="8"] { color: #666; }
+    .cell.flagged { color: #ff7875; }
+    .cell[data-num="1"] { color: #5aa9ff; }
+    .cell[data-num="2"] { color: #73d13d; }
+    .cell[data-num="3"] { color: #ff7875; }
+    .cell[data-num="4"] { color: #b37feb; }
+    .cell[data-num="5"] { color: #ffa940; }
+    .cell[data-num="6"] { color: #5cdbd3; }
+    .cell[data-num="7"] { color: #e8eaf2; }
+    .cell[data-num="8"] { color: #8c8fa8; }
 
     .message {
       text-align: center;

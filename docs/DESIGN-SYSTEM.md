@@ -219,13 +219,64 @@
 
 - **离线优先**：所有第三方库内置在 `public/vendor/`，断网可用
 - **无构建工具**：直接 `<script src>` / `<link>`，不使用打包器
-- **扫雷棋盘为例外**：数字色（`--c-info` 蓝 1、绿 2、红 3…）属功能语义色，不套暗色主题，以保证可辨识度
+- **扫雷棋盘已套暗色**：底盘 `#23263a`、格底 `#2e3250`，保留经典数字色相（蓝 1 / 绿 2 / 红 3 的通用约定），仅整体提亮一档 —— 统一与可玩性兼顾
 - **UI.toast 一律用 textContent**：用户可控内容禁止 `innerHTML`，避免 XSS
 
 ---
 
-## 8. 变更记录
+## 8. 质感层与特效规范
+
+### 8.1 质感三件套
+
+| 手法 | 实现 | 位置 |
+| :--- | :--- | :--- |
+| 颗粒噪点 | 内联 SVG `feTurbulence` data-uri，`opacity: .035` + `mix-blend-mode: overlay`，消除大面积渐变的色带 | `body::before` |
+| 漂移光斑 | 两个大半径 `radial-gradient` + `drift 40s` 缓动漂移 | `body::after` |
+| 边缘光 | `.glass-card::after` 渐变描边，`mask-composite: exclude` 裁出 1px 环；高光跟随鼠标（`--mx/--my`） | `theme.css` |
+
+阴影分层：`--sh-*` 由单层纯黑改为「环境黑 + 接触阴影 + 主色染色」三层；`--sh-inset` 改双边（顶边高光 + 底边暗部）制造玻璃厚度。
+
+### 8.2 微交互
+
+| 名称 | API | 说明 |
+| :--- | :--- | :--- |
+| 高光跟随 | `UI.pointerGlow('.glass-card')` | 写入 `--mx/--my`，仅 `(hover:hover)` 启用，rAF 节流 |
+| 磁性按钮 | `UI.magneticButtons(sel, max)` | 指针位移映射为按钮位移，上限默认 8px，离开复位 |
+| 错峰入场 | `UI.revealOnScroll('.reveal')` | IntersectionObserver + `--d` 索引，`transition-delay: calc(var(--d)*70ms)` |
+
+> 入场动画用**独立的 `translate` 属性**而非 `transform`，避免与 hover 上浮的 `transform: translateY(-4px)` 互相覆盖。
+
+### 8.3 爆炸特效：赛博能量爆
+
+登录页 `public/login.html`，**纯自研 Canvas 2D，零外部依赖**。
+
+| 要素 | 参数 |
+| :--- | :--- |
+| 双画布 | `#bgCanvas`（静态背景，仅 resize 重绘）+ `#gameCanvas`（特效层，每帧拖尾擦除） |
+| 拖尾 | `destination-out` + `rgba(0,0,0,.22)` 覆盖，不碰背景层 |
+| DPR | `min(devicePixelRatio, 2)` + `setTransform(dpr,…)`，高分屏不发虚 |
+| deltaTime | `min(dt/16.667, 3)`，60Hz 与 144Hz 表现一致 |
+| 粒子三层 | core 18 / shell 54 / spark 24，速度·阻尼·重力各不相同 |
+| 色温演化 | 青 185° → 蓝紫 250° → 品红 310°，亮度 74% → 32%（余烬） |
+| 辉光 | 预烘 24 张径向渐变 sprite + `globalCompositeOperation='lighter'`，**全程零 `shadowBlur`** |
+| 流星 | 速度 > 6 的粒子改画短线拉伸 |
+| 电弧 | 每次爆炸 2–4 条，6–9 段随机折线，存活 120–260ms |
+| 冲击波 | 3 环（max 90 / 155 / 230），径向渐变 + 线宽随生命周期收细 |
+| 色差 | 离屏拷贝 + `source-in` 染青/品红 + 左右错位叠加，`aberration` 指数衰减 |
+| 过曝 | `#flash`（`pointer-events:none`）先过曝后回落；死亡层是「过曝 → 余烬 → 压暗」，而非直接压黑 |
+| 震动 | JS 随机衰减 `amp *= 0.86^dt`，**只 transform `.login-wrapper`，不动 body**（body 有 transform 会让 `backdrop-filter` 每帧重算，是掉帧主因） |
+| 降级 | `MAX_PARTICLES` 900（低端 400）；`LOW`（reduced-motion 或 ≤4 核）关拖尾、砍 spark、不震动；`prefers-reduced-motion` 直接不启动 rAF |
+| 时序 | 炸弹按 x 从左到右依次引爆（`160 + rand(0,90)`ms 间隔）制造连锁感，再中心三连爆，最后弹死亡层 |
+
+### 8.4 动效可访问性
+
+新增 JS 动画**必须主动读 `prefers-reduced-motion`**。CSS 全局压制只对 CSS 动画生效，对 `requestAnimationFrame` 驱动的动画完全无效。
+
+---
+
+## 9. 变更记录
 
 | 版本 | 变更 |
 | :--- | :--- |
 | v1.0 | 建立令牌体系、组件规范、图标规范、无障碍规范与可视化展示页 |
+| v1.1 | 质感层（噪点 / 漂移光斑 / 边缘光 / 分层染色阴影）、微交互三件套、爆炸特效重写为赛博能量爆、扫雷棋盘套暗色、字号阶梯调至 1.25 倍率 |

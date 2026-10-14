@@ -319,3 +319,40 @@
     height: 220px;
   }
 }
+
+/* ============================================================
+   8. 滚动入场（配合 UI.revealOnScroll，--d 由脚本写入）
+   ============================================================ */
+.reveal {
+  opacity: 0;
+  /* 用独立的 translate 属性，避免与 hover/lift 的 transform 打架 */
+  translate: 0 18px;
+  transition:
+    opacity var(--t-slow) var(--ease),
+    translate var(--t-slow) var(--ease);
+  transition-delay: calc(var(--d, 0) * 70ms);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    translate: 0 0;
+    transition: none;
+  }
+}
+
+/* 强度条分段错峰填充 */
+.strength-seg:nth-child(2) {
+  transition-delay: 40ms;
+}
+.strength-seg:nth-child(3) {
+  transition-delay: 80ms;
+}
+.strength-seg:nth-child(4) {
+  transition-delay: 120ms;
+}

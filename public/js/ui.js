@@ -231,12 +231,113 @@
     return d || '未知';
   }
 
+  /* ---------------- 鼠标跟随高光 ---------------- */
+
+  /**
+   * 让元素高光跟随鼠标：写入 --mx / --my（百分比），
+   * 配合 CSS 中的 radial-gradient(at var(--mx) var(--my)) 使用。
+   * 仅在支持 hover 的设备启用，rAF 节流避免高频写样式。
+   * @param {string} selector 目标选择器
+   */
+  function pointerGlow(selector) {
+    if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
+    var nodes = document.querySelectorAll(selector);
+    if (!nodes.length) return;
+
+    for (var i = 0; i < nodes.length; i += 1) {
+      (function (el) {
+        var frame = null;
+        el.addEventListener('pointermove', function (event) {
+          if (frame) return;
+          frame = requestAnimationFrame(function () {
+            frame = null;
+            var rect = el.getBoundingClientRect();
+            var mx = ((event.clientX - rect.left) / rect.width) * 100;
+            var my = ((event.clientY - rect.top) / rect.height) * 100;
+            el.style.setProperty('--mx', mx.toFixed(1) + '%');
+            el.style.setProperty('--my', my.toFixed(1) + '%');
+          });
+        });
+        el.addEventListener('pointerleave', function () {
+          el.style.setProperty('--mx', '50%');
+          el.style.setProperty('--my', '0%');
+        });
+      })(nodes[i]);
+    }
+  }
+
+  /* ---------------- 磁性按钮 ---------------- */
+
+  /**
+   * 按钮随指针轻微位移（上限 8px），离开复位。
+   * 用 transform 而非 translate 属性，避免与其它过渡冲突。
+   * @param {string} selector
+   * @param {number} [max=8] 最大位移像素
+   */
+  function magneticButtons(selector, max) {
+    if (!window.matchMedia || !window.matchMedia('(hover: hover)').matches) return;
+    max = typeof max === 'number' ? max : 8;
+    var nodes = document.querySelectorAll(selector);
+    if (!nodes.length) return;
+
+    for (var i = 0; i < nodes.length; i += 1) {
+      (function (el) {
+        el.addEventListener('pointermove', function (event) {
+          var rect = el.getBoundingClientRect();
+          var dx = (event.clientX - (rect.left + rect.width / 2)) / rect.width;
+          var dy = (event.clientY - (rect.top + rect.height / 2)) / rect.height;
+          el.style.transform =
+            'translate(' + (dx * max).toFixed(1) + 'px,' + (dy * max).toFixed(1) + 'px)';
+        });
+        el.addEventListener('pointerleave', function () {
+          el.style.transform = '';
+        });
+      })(nodes[i]);
+    }
+  }
+
+  /* ---------------- 滚动入场（错峰） ---------------- */
+
+  /**
+   * 元素进入视口时加 .is-visible，配合 --d 索引做错峰延迟。
+   * 不支持 IntersectionObserver 时直接全部显示，保证内容不丢失。
+   * @param {string} selector
+   */
+  function revealOnScroll(selector) {
+    var nodes = document.querySelectorAll(selector);
+    if (!nodes.length) return;
+
+    var i;
+    for (i = 0; i < nodes.length; i += 1) nodes[i].style.setProperty('--d', String(i));
+
+    if (!('IntersectionObserver' in window)) {
+      for (i = 0; i < nodes.length; i += 1) nodes[i].classList.add('is-visible');
+      return;
+    }
+
+    var observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add('is-visible');
+          observer.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.15 }
+    );
+
+    for (i = 0; i < nodes.length; i += 1) observer.observe(nodes[i]);
+  }
+
   window.UI = {
     toast: toast,
     withSpinner: withSpinner,
     renderSkeleton: renderSkeleton,
     scorePassword: scorePassword,
     formatDate: formatDate,
-    dayOf: dayOf
+    dayOf: dayOf,
+    pointerGlow: pointerGlow,
+    magneticButtons: magneticButtons,
+    revealOnScroll: revealOnScroll
   };
 })();
