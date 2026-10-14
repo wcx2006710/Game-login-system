@@ -496,13 +496,23 @@
       ctx.save();
       ctx.translate(this.x, this.y);
 
+      // 常驻青色外发光：深色球体在深蓝背景上几乎不可见，靠这层光晕把它"托"出来
+      ctx.globalCompositeOperation = 'lighter';
+      const halo = ctx.createRadialGradient(0, 0, r * 0.45, 0, 0, r * 2.3);
+      halo.addColorStop(0, 'rgba(0,240,255,0.30)');
+      halo.addColorStop(0.5, 'rgba(102,126,234,0.16)');
+      halo.addColorStop(1, 'rgba(0,240,255,0)');
+      ctx.fillStyle = halo;
+      ctx.beginPath();
+      ctx.arc(0, 0, r * 2.3, 0, Math.PI * 2);
+      ctx.fill();
+
       // 向外扩散的能量脉冲环
       const phase = ((T * 0.6 + this.pulse * 3) % 26) / 26;
       const pr = r + phase * 26;
-      ctx.globalCompositeOperation = 'lighter';
       const ring = ctx.createRadialGradient(0, 0, pr * 0.62, 0, 0, pr);
       ring.addColorStop(0, 'rgba(0,240,255,0)');
-      ring.addColorStop(0.82, 'rgba(0,240,255,' + (0.3 * (1 - phase)).toFixed(3) + ')');
+      ring.addColorStop(0.82, 'rgba(0,240,255,' + (0.42 * (1 - phase)).toFixed(3) + ')');
       ring.addColorStop(1, 'rgba(139,92,246,0)');
       ctx.fillStyle = ring;
       ctx.beginPath();
@@ -510,32 +520,39 @@
       ctx.fill();
       ctx.globalCompositeOperation = 'source-over';
 
-      // 球体本体
+      // 球体本体（提亮，避免与背景融为一体）
       const g = ctx.createRadialGradient(-r * 0.25, -r * 0.32, r * 0.1, 0, 0, r);
-      g.addColorStop(0, '#2f3559');
-      g.addColorStop(0.6, '#15172c');
-      g.addColorStop(1, '#080a14');
+      g.addColorStop(0, '#4a5480');
+      g.addColorStop(0.6, '#22263f');
+      g.addColorStop(1, '#10131f');
       ctx.fillStyle = g;
       ctx.beginPath();
       ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
 
+      // 完整青色轮廓：先勾一圈，保证任何背景下都能看清边界
+      ctx.lineWidth = 1.2;
+      ctx.strokeStyle = 'rgba(0,240,255,0.38)';
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+
       // 金属边缘光：上半亮白、下半冷蓝（环境反射）
-      ctx.lineWidth = 1.6;
-      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.8;
+      ctx.strokeStyle = 'rgba(255,255,255,0.62)';
       ctx.beginPath();
       ctx.arc(0, 0, r - 1, Math.PI * 1.05, Math.PI * 1.95);
       ctx.stroke();
-      ctx.strokeStyle = 'rgba(120,180,255,0.32)';
+      ctx.strokeStyle = 'rgba(120,180,255,0.4)';
       ctx.beginPath();
       ctx.arc(0, 0, r - 1, Math.PI * 0.05, Math.PI * 0.95);
       ctx.stroke();
 
-      // 核心光点（呼吸）
-      const core = 3 + Math.sin(this.pulse * 2) * 1.2;
+      // 核心光点（呼吸，用最亮的一档 sprite）
+      const core = 5 + Math.sin(this.pulse * 2) * 1.6;
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 1;
-      ctx.drawImage(SPRITES[2], -core * 2, -core * 2, core * 4, core * 4);
+      ctx.drawImage(SPRITES[0], -core * 2, -core * 2, core * 4, core * 4);
 
       // 引信：按 fuse 截短，火花沿端点跑
       const fx = 2;
@@ -550,7 +567,7 @@
 
       const sx = fx + 14 * this.fuse;
       const sy = fy - 4;
-      const s = 3 + Math.sin(this.pulse * 4) * 1.2;
+      const s = 4.5 + Math.sin(this.pulse * 4) * 1.5;
       ctx.globalCompositeOperation = 'lighter';
       ctx.drawImage(SPRITES[0], sx - s, sy - s, s * 2, s * 2);
 
@@ -705,11 +722,11 @@
         let y = 0;
         let valid = false;
         let attempts = 0;
-        while (!valid && attempts < 50) {
+        while (!valid && attempts < 100) {
           x = Math.random() * (W - 100) + 50;
           y = Math.random() * (H - 100) + 50;
-          // 避开登录框
-          if (x > boxX - 60 && x < boxX + boxW + 60 && y > boxY - 60 && y < boxY + boxH + 60) {
+          // 避开登录框（留 40px 余量，小屏也能生成满 6 颗）
+          if (x > boxX - 40 && x < boxX + boxW + 40 && y > boxY - 40 && y < boxY + boxH + 40) {
             attempts += 1;
             continue;
           }
