@@ -85,7 +85,7 @@
 | 令牌 | 值 | 用途 |
 | :--- | :--- | :--- |
 | `--z-bg` | -1 | 粒子背景 |
-| `--z-canvas` | 1 | 登录页炸弹画布 |
+| `--z-canvas` | 1 | 登录页背景画布（`--gameCanvas` 特效层取 2） |
 | `--z-content` | 10 | 页面主体 |
 | `--z-sticky` | 50 | 吸顶导航 |
 | `--z-toast` | 1000 | Toast |
@@ -266,7 +266,7 @@
 | 过曝 | `#flash`（`pointer-events:none`）先过曝后回落；死亡层是「过曝 → 余烬 → 压暗」，而非直接压黑 |
 | 震动 | JS 随机衰减 `amp *= 0.86^dt`，**只 transform `.login-wrapper`，不动 body**（body 有 transform 会让 `backdrop-filter` 每帧重算，是掉帧主因） |
 | 降级 | `MAX_PARTICLES` 900（低端 400）；`LOW`（reduced-motion 或 ≤4 核）关拖尾、砍 spark、不震动；`prefers-reduced-motion` 直接不启动 rAF |
-| 时序 | 炸弹按 x 从左到右依次引爆（`160 + rand(0,90)`ms 间隔）制造连锁感，再中心三连爆，最后弹死亡层 |
+| 时序 | 随机位置按 x 排序依次引爆（`160 + rand(0,90)`ms 间隔）制造空间连锁感，再中心三连爆，最后弹死亡层 |
 
 ### 8.4 动效可访问性
 
